@@ -298,25 +298,34 @@ function valutaOfferta(o){
 function avvisi(){ const out=[]; Object.entries(S.contatti).forEach(([id,k]) => (k.offerte||[]).forEach(o => { const r = valutaOfferta(o); if(r.on) out.push({id, k, o, msg:r.msg}); })); return out; }
 
 /* ================= OpenStreetMap: vie dentro l'area ================= */
-const OVERPASS = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter'];
-async function fetchOSM(poly){
-  const ps = poly.map(p=>p[0].toFixed(6)+' '+p[1].toFixed(6)).join(' ');
-  const q = `[out:json][timeout:60];
-way(poly:"${ps}")["highway"~"^(residential|living_street|unclassified|tertiary|secondary|primary|pedestrian|service|road)$"]["name"];
-out geom;
-(node(poly:"${ps}")["addr:housenumber"]["addr:street"];way(poly:"${ps}")["addr:housenumber"]["addr:street"];);
-out center;`;
-  let lastErr = null;
+const OVERPASS = ['https://overpass-api.de/api/interpreter','https://overpass.private.coffee/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+const HW_RE = '^(residential|living_street|unclassified|tertiary|secondary|primary|pedestrian|service|road)$';
+async function overpass(q, label){
+  const errs = [];
   for(const url of OVERPASS){
+    const host = new URL(url).host;
+    V.loadingMsg = `${label} · server ${errs.length+1} di ${OVERPASS.length}`; if(V.mode==='loading') render();
     try{
-      const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), 70000);
+      const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), 30000);
       const r = await fetch(url, {method:'POST', body:'data='+encodeURIComponent(q), headers:{'Content-Type':'application/x-www-form-urlencoded'}, signal:ctl.signal});
       clearTimeout(t);
-      if(!r.ok){ lastErr = new Error('HTTP '+r.status); continue; }
-      return await r.json();
-    }catch(e){ lastErr = e; }
+      if(!r.ok){ errs.push(`${host}: risposta ${r.status}`); continue; }
+      const j = await r.json();
+      if(j && j.remark && /error|timed out|runtime|out of memory/i.test(j.remark)){ errs.push(`${host}: ${String(j.remark).slice(0,90)}`); continue; }
+      if(!j || !Array.isArray(j.elements)){ errs.push(`${host}: risposta vuota`); continue; }
+      return j;
+    }catch(e){ errs.push(`${host}: ${e && e.name==='AbortError' ? 'troppo lento (30 s)' : (e && e.message) || 'errore di rete'}`); }
   }
-  throw lastErr || new Error('rete');
+  const err = new Error('overpass'); err.details = errs; throw err;
+}
+function bboxOf(poly){ const la = poly.map(p=>p[0]), lo = poly.map(p=>p[1]); return [Math.min(...la)-0.0004, Math.min(...lo)-0.0005, Math.max(...la)+0.0004, Math.max(...lo)+0.0005].map(x=>x.toFixed(6)).join(','); }
+async function fetchOSM(poly){
+  const bb = bboxOf(poly);
+  const vie = await overpass(`[out:json][timeout:25];way["highway"~"${HW_RE}"]["name"](${bb});out geom;`, 'Cerco le vie');
+  let addr = {elements:[]}; V.civiciErr = false;
+  try{ addr = await overpass(`[out:json][timeout:25];(node["addr:housenumber"]["addr:street"](${bb});way["addr:housenumber"]["addr:street"](${bb}););out center;`, 'Cerco i civici'); }
+  catch(e){ V.civiciErr = true; }
+  const seen = new Set(); return {elements: vie.elements.concat(addr.elements).filter(e => { const k = e.type+e.id; if(seen.has(k)) return false; seen.add(k); return true; })};
 }
 function chainWays(lines){
   const K = p => p[0].toFixed(6)+','+p[1].toFixed(6);
@@ -348,7 +357,7 @@ function buildSegments(osm, poly){
     kept.forEach((p,i) => segs.push({key:name+'#'+i, nome: name + (kept.length>1 ? ' · tratto '+(i+1) : ''), base:name, coords: round5(thin(p.c)), len:p.len, main, civici:[], sel:true}));
   });
   els.filter(e => e.tags && e.tags['addr:housenumber'] && e.tags['addr:street']).forEach(a => {
-    const pt = a.type==='node' ? [a.lat,a.lon] : (a.center ? [a.center.lat,a.center.lon] : null); if(!pt) return;
+    const pt = a.type==='node' ? [a.lat,a.lon] : (a.center ? [a.center.lat,a.center.lon] : null); if(!pt || !inPoly(pt, poly)) return;
     const cand = segs.filter(s => normName(s.base)===normName(a.tags['addr:street'])); if(!cand.length) return;
     let best = cand[0], bd = Infinity; cand.forEach(s => { const d = distPtLine(pt, s.coords); if(d<bd){ bd=d; best=s; } });
     String(a.tags['addr:housenumber']).split(/[;,]/).map(h=>h.trim()).filter(Boolean).forEach(h => { if(!best.civici.includes(h)) best.civici.push(h); });
@@ -565,6 +574,7 @@ function viewMappa(){
     const area = polyArea(V.draw);
     return `<div class="card status"><div class="status-l"><b>Disegna la zona</b><span class="meta">${V.draw.length>=3?'circa '+num(area/1e6,2)+' km²':''}</span></div>
       <div class="small">Il primo punto (verde) è da dove parti. Tocca gli angoli della zona in ordine, anche solo 4. Meglio zone da 10–40 vie.</div>
+      ${V.err?`<div class="hint" style="background:var(--red-bg);color:var(--red)"><b>${esc(V.err.msg)}</b><br><span class="small" style="color:inherit">${V.err.det.map(esc).join('<br>')}</span></div>`:''}
       ${area>2.5e6?'<div class="hint">Zona grande: la ricerca può essere lenta e il giro lunghissimo. Meglio dividerla in due.</div>':''}
       <div class="btns"><button class="btn" data-act="draw-undo" ${V.draw.length?'':'disabled'}>Togli ultimo</button><button class="btn" data-act="draw-cancel">Annulla</button></div>
       <button class="btn btn-p btn-big" data-act="draw-done" ${V.draw.length>=3?'':'disabled'}>Cerca le vie</button></div>`;
@@ -574,6 +584,7 @@ function viewMappa(){
     const F = V.found; const sel = F.segs.filter(s=>s.sel); const civ = sel.reduce((s,x)=>s+x.civici.length,0);
     const pv = V.preview;
     return `<div class="card status">
+      ${V.civiciErr?'<div class="hint">Vie trovate, ma i civici non si sono scaricati: li inserisci quando metti la lettera.</div>':''}
       <div class="status-l"><b>${F.segs.length} vie trovate</b><span class="meta">${sel.length} scelte · ${civ} civici sulla mappa</span></div>
       <div class="f"><label for="z-nome">Nome della zona</label><input id="z-nome" value="${esc(F.nome)}" autocomplete="off"></div>
       <div class="f"><span class="lbl">Tipo di case</span>${seg('ztipo', TIPI, F.tipo||'misto')}</div>
@@ -870,15 +881,15 @@ function sheetImp(){
 
 /* ================= zona → giro ================= */
 async function cercaVie(){
-  const area = V.draw.slice(); V.mode='loading'; V.loadingMsg='Cerco le vie su OpenStreetMap…'; render();
+  const area = V.draw.slice(); V.err = null; V.mode='loading'; V.loadingMsg='Cerco le vie su OpenStreetMap…'; render();
   try{
     const osm = await fetchOSM(area);
     const segs = buildSegments(osm, area);
-    if(!segs.length){ V.mode='draw'; render(); toast('Nessuna via con nome trovata in questa zona.'); return; }
+    if(!segs.length){ V.mode='draw'; V.err = {msg:'Ho scaricato i dati, ma dentro l’area non ci sono vie con nome. Prova a disegnare la zona un po’ più grande.', det:[`elementi ricevuti: ${osm.elements.length}`]}; render(); return; }
     const zoneN = Object.keys(S.piani).length + 1;
     V.found = {area, segs, start: area[0], nome: 'Zona '+zoneN+' · '+fmt(oggi()), tipo:'misto'};
     V.mode='review'; ricalcolaPreview(); render(); fitMap();
-  }catch(e){ V.mode='draw'; render(); toast('Non riesco a scaricare le vie: controlla la connessione e riprova tra poco.'); }
+  }catch(e){ V.mode='draw'; V.err = {msg:'Non riesco a scaricare le vie: i server di OpenStreetMap non hanno risposto. Riprova tra qualche minuto.', det:(e && e.details) || [String(e && e.message || e)]}; render(); }
 }
 function ricalcolaPreview(){
   const F = V.found; const idx = F.segs.map((s,i)=>i).filter(i=>F.segs[i].sel);
@@ -992,7 +1003,7 @@ document.addEventListener('click', e => {
     case 'import': $('#import-file').click(); break;
     case 'new-zone': V.tab='mappa'; V.viaId=null; V.pianoId=null; V.mode='draw'; V.draw=[]; V.found=null; V.preview=null; location.hash='mappa'; render(); window.scrollTo(0,0); setTimeout(()=>{ if(map){ map.invalidateSize(); if(mePos) map.setView(mePos,16); } }, 80); break;
     case 'draw-undo': V.draw.pop(); drawMap(); render(); break;
-    case 'draw-cancel': V.mode='idle'; V.draw=[]; V.found=null; V.preview=null; render(); break;
+    case 'draw-cancel': V.err=null; V.mode='idle'; V.draw=[]; V.found=null; V.preview=null; render(); break;
     case 'draw-done': cercaVie(); break;
     case 'save-plan': salvaGiro(); break;
     case 'open-piano': V.tab='mappa'; V.viaId=null; V.mode='idle'; V.pianoId=id; location.hash='mappa'; render(); window.scrollTo(0,0); setTimeout(focusStep, 80); break;
