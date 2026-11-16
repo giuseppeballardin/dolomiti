@@ -1,0 +1,1028 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Giro Lettere</title>
+<meta name="theme-color" content="#4C4CA0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Giro Lettere">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* Layout: app da tasca a una colonna, mappa in alto nella scheda Mappa, barra in basso, fogli dal basso */
+:root{
+  --bg:#F5F5FA; --surface:#FFFFFF; --ink:#1D1F33; --muted:#5C5F78; --line:#E1E1EE;
+  --accent:#4C4CA0; --accent-ink:#FFFFFF; --accent-soft:#ECECF8;
+  --grey:#62657E; --grey-bg:#EDEDF4;
+  --amber:#8A5A00; --amber-bg:#FFF2CC;
+  --orange:#B23C0A; --orange-bg:#FFE7D6;
+  --red:#B42318; --red-bg:#FDE3E1;
+  --green:#1C6E3D; --green-bg:#DFF2E6;
+  --purple:#5B3AA8; --purple-bg:#EDE6FB;
+  --line-grey:#8A8DA6; --line-amber:#D99A00; --line-orange:#E0601C; --line-red:#D92D20; --line-green:#2E9A5A; --line-purple:#7A55D6; --line-accent:#4C4CA0;
+  --shadow:0 8px 30px rgba(29,31,51,.18);
+  --f-head:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#13141F; --surface:#1D1F2E; --ink:#ECECF5; --muted:#A3A5BE; --line:#2F3145;
+  --accent:#9A9AF0; --accent-ink:#13141F; --accent-soft:#2A2B47;
+  --grey:#B1B3CA; --grey-bg:#2A2C3D; --amber:#F5C66B; --amber-bg:#3A3018;
+  --orange:#FFA370; --orange-bg:#40261A; --red:#FF9A90; --red-bg:#41201F;
+  --green:#7BD9A0; --green-bg:#1B3526; --purple:#C6B2FF; --purple-bg:#2E2647;
+  --shadow:0 8px 30px rgba(0,0,0,.5); color-scheme:dark }}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent;padding-top:env(safe-area-inset-top,0px)}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:640px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px calc(96px + env(safe-area-inset-bottom,0px))}
+h1,h2,h3{font-family:var(--f-head);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:26px;font-weight:800}
+h2{font-size:13px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.date{color:var(--muted);font-size:14px}
+.sec{display:flex;flex-direction:column;gap:8px;margin-top:22px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.pad{padding:12px 14px}
+.list{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:12px 14px;border:0;border-bottom:1px solid var(--line);background:none;text-align:left;width:100%;cursor:pointer;min-height:60px}
+.row:last-child{border-bottom:0}
+.row:active{background:var(--accent-soft)}
+.row.cur{background:var(--accent-soft)}
+.row-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
+.row-t{font-weight:600;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row-s{color:var(--muted);font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.n{flex:0 0 30px;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;background:var(--grey-bg);color:var(--grey);font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px;font-size:12.5px;font-weight:700;white-space:nowrap;flex:0 0 auto}
+.c-grey{color:var(--grey);background:var(--grey-bg)} .c-amber{color:var(--amber);background:var(--amber-bg)}
+.c-orange{color:var(--orange);background:var(--orange-bg)} .c-red{color:var(--red);background:var(--red-bg)}
+.c-green{color:var(--green);background:var(--green-bg)} .c-purple{color:var(--purple);background:var(--purple-bg)}
+.c-accent{color:var(--accent);background:var(--accent-soft)}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:1px;min-width:0}
+.kpi b{font-family:var(--f-head);font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.15}
+.kpi span{font-size:12.5px;color:var(--muted)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:10px 16px;border-radius:12px;border:1px solid var(--line);background:var(--surface);font-weight:700;cursor:pointer;text-decoration:none;color:var(--ink)}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn-p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn-big{min-height:58px;font-size:17px;width:100%}
+.btn-sm{min-height:38px;padding:6px 12px;font-size:14px;border-radius:10px}
+.btn-danger{color:var(--red);border-color:var(--red-bg)}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btns>.btn{flex:1 1 0}
+.quick{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer;min-height:38px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.search{width:100%;min-height:46px;border-radius:12px;border:1px solid var(--line);background:var(--surface);padding:10px 14px}
+.empty{padding:22px 16px;text-align:center;color:var(--muted);font-size:14.5px}
+.alert{border:2px solid var(--orange);background:var(--orange-bg)}
+.zona{font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:4px 2px 0}
+.banner{border-radius:12px;padding:10px 14px;font-size:13.5px;background:var(--amber-bg);color:var(--amber);margin-bottom:12px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.back{border:0;background:none;color:var(--accent);font-weight:700;padding:8px 0;cursor:pointer;min-height:44px}
+.status{padding:14px;display:flex;flex-direction:column;gap:12px}
+.status-l{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.meta{color:var(--muted);font-size:14px}
+.pass{display:flex;gap:6px;flex-wrap:wrap}
+.hint{font-size:14px;background:var(--accent-soft);color:var(--ink);border-radius:10px;padding:10px 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.civ{min-height:54px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:700;font-size:16px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;padding:4px 2px;font-variant-numeric:tabular-nums}
+.civ small{font-size:10.5px;font-weight:600;opacity:.9;margin-top:2px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.civ.c-grey,.civ.c-red,.civ.c-green,.civ.c-amber,.civ.c-purple,.civ.c-accent{border-color:transparent}
+.legend{display:flex;gap:6px;flex-wrap:wrap}
+/* mappa */
+#mapbox{position:relative;margin:-14px calc(-1 * max(16px,env(safe-area-inset-left,0px))) 12px;}
+#map{height:52vh;min-height:300px;background:var(--grey-bg)}
+.maptools{position:absolute;right:max(12px,env(safe-area-inset-right,0px));top:12px;z-index:500;display:flex;flex-direction:column;gap:8px}
+.mapbtn{width:46px;height:46px;border-radius:12px;border:1px solid var(--line);background:var(--surface);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink)}
+.mapbtn svg{width:22px;height:22px}
+.mapbtn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.maphint{pointer-events:none;position:absolute;left:12px;right:70px;top:12px;z-index:500;background:var(--ink);color:var(--bg);border-radius:12px;padding:9px 12px;font-size:13.5px;font-weight:600;box-shadow:var(--shadow)}
+.leaflet-container{font-family:var(--f-body)}
+.stepnum{background:var(--surface);color:var(--ink);border:2px solid var(--ink);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+.stepnum.cur{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);width:32px;height:32px;font-size:14px}
+.vtx{width:16px;height:16px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.vtx.first{background:var(--green);width:20px;height:20px}
+.me{width:18px;height:18px;border-radius:50%;background:#2F7BF6;border:3px solid #fff;box-shadow:0 0 0 6px rgba(47,123,246,.25)}
+.guide{padding:14px;display:flex;flex-direction:column;gap:10px}
+.guide-t{font-family:var(--f-head);font-size:22px;font-weight:800;line-height:1.2}
+.prog{height:8px;border-radius:999px;background:var(--grey-bg);overflow:hidden}
+.prog i{display:block;height:100%;background:var(--accent);border-radius:999px}
+/* tab bar */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:1000;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.tabs-in{display:grid;grid-template-columns:repeat(5,1fr);width:100%;max-width:640px}
+.tab{border:0;background:none;padding:8px 2px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11.5px;font-weight:600;color:var(--muted);cursor:pointer;min-height:58px;position:relative}
+.tab svg{width:24px;height:24px}
+.tab[aria-current="page"]{color:var(--accent)}
+.badge{position:absolute;top:4px;left:calc(50% + 6px);background:var(--orange);color:#fff;border-radius:999px;font-size:11px;font-weight:800;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 5px}
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(10,10,20,.45);z-index:2000;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:640px;max-height:92%;overflow-y:auto;border-radius:20px 20px 0 0;box-shadow:var(--shadow);padding:18px max(18px,env(safe-area-inset-left,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px}
+.sheet-h{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sheet-h h3{font-size:20px;font-weight:800}
+.x{border:0;background:var(--grey-bg);width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:20px;line-height:1;flex:0 0 40px}
+.f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.f label,.lbl{font-size:13px;font-weight:700;color:var(--muted)}
+.f input,.f select,.f textarea{width:100%;min-height:48px;border-radius:12px;border:1px solid var(--line);background:var(--bg);padding:10px 12px}
+.f textarea{min-height:70px;resize:vertical}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.f3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1 1 auto;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-weight:600;cursor:pointer;padding:6px 10px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.esiti{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.esiti button{min-height:56px;border-radius:12px;border:2px solid transparent;font-weight:700;font-size:15px;cursor:pointer}
+.esiti button[aria-pressed="true"]{border-color:var(--ink)}
+.box{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+.check{display:flex;align-items:center;gap:10px;min-height:44px;font-weight:600}
+.check input{width:22px;height:22px;accent-color:var(--accent);flex:0 0 22px}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:9px 7px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+tr:last-child td{border-bottom:0}
+.big{font-family:var(--f-head);font-weight:800;font-size:34px;line-height:1.1;font-variant-numeric:tabular-nums}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;z-index:3000;max-width:calc(100% - 32px);box-shadow:var(--shadow)}
+.small{font-size:13px;color:var(--muted)}
+.danger-zone{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spin{width:22px;height:22px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:sp 0.9s linear infinite;display:inline-block;vertical-align:middle}
+@keyframes sp{to{transform:rotate(360deg)}}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (max-width:380px){.kpi b{font-size:20px}.f3{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="mapbox" hidden>
+    <div id="map" aria-label="Mappa"></div>
+    <div class="maptools">
+      <button class="mapbtn" id="btn-gps" data-act="gps" aria-pressed="false" aria-label="Mostra dove sono"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+      <button class="mapbtn" data-act="fit" aria-label="Inquadra il giro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    </div>
+    <div class="maphint" id="maphint" hidden></div>
+  </div>
+  <div id="app"><div class="empty">Carico…</div></div>
+</div>
+<nav class="tabs" aria-label="Sezioni"><div class="tabs-in" id="tabs"></div></nav>
+<div id="sheet-root"></div>
+<div id="toast-root"></div>
+<input type="file" id="import-file" accept="application/json,.json" hidden>
+
+<script>
+/* ================= utilità ================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clone = o => JSON.parse(JSON.stringify(o ?? null));
+const pad = n => String(n).padStart(2,'0');
+const isoOf = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const oggi = () => isoOf(new Date());
+const toUTC = s => { const [y,m,d] = s.split('-').map(Number); return Date.UTC(y,m-1,d); };
+const giorni = (a,b) => Math.round((toUTC(b)-toUTC(a))/86400000);
+const addDays = (s,n) => { const t = new Date(toUTC(s)+n*86400000); return t.getUTCFullYear()+'-'+pad(t.getUTCMonth()+1)+'-'+pad(t.getUTCDate()); };
+const MESI = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+const fmt = s => { if(!s) return ''; const [y,m,d] = s.split('-').map(Number); return d+' '+MESI[m-1]+(y!==new Date().getFullYear()?' '+y:''); };
+const num = (n,d=0) => Number(n||0).toLocaleString('it-IT',{minimumFractionDigits:d,maximumFractionDigits:d});
+const prezzo = n => n==null||n==='' ? '–' : Number(n).toLocaleString('it-IT',{minimumFractionDigits:3,maximumFractionDigits:4});
+const pct = (a,b) => b ? num(a/b*100,1)+'%' : '–';
+const nid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const fasciaOra = () => { const d = new Date(), g = d.getDay(), h = d.getHours(); if(g===6) return 'sabato'; if(g===0) return 'domenica'; return h<13?'mattina':h<17?'pomeriggio':'sera'; };
+const numVal = v => { if(v==null||v==='') return null; const n = Number(String(v).replace(',','.')); return isFinite(n) ? n : null; };
+const km = m => m>=1000 ? num(m/1000,1)+' km' : num(Math.round(m/10)*10)+' m';
+const normName = s => String(s||'').toLowerCase().replace(/ · tratto \d+$/,'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+
+/* ================= geometria ================= */
+const R = 6371000, rad = x => x*Math.PI/180;
+function hav(a,b){ const dLat = rad(b[0]-a[0]), dLon = rad(b[1]-a[1]); const s = Math.sin(dLat/2)**2 + Math.cos(rad(a[0]))*Math.cos(rad(b[0]))*Math.sin(dLon/2)**2; return 2*R*Math.asin(Math.sqrt(s)); }
+const lineLen = c => { let s=0; for(let i=1;i<c.length;i++) s+=hav(c[i-1],c[i]); return s; };
+function inPoly(p, poly){ let ins=false; for(let i=0,j=poly.length-1;i<poly.length;j=i++){ const [yi,xi]=poly[i],[yj,xj]=poly[j]; if(((yi>p[0])!==(yj>p[0])) && (p[1] < (xj-xi)*(p[0]-yi)/(yj-yi)+xi)) ins=!ins; } return ins; }
+function polyArea(poly){ if(poly.length<3) return 0; const lat0 = rad(poly[0][0]); const pts = poly.map(p=>[rad(p[1])*R*Math.cos(lat0), rad(p[0])*R]); let s=0; for(let i=0;i<pts.length;i++){ const [x1,y1]=pts[i],[x2,y2]=pts[(i+1)%pts.length]; s+=x1*y2-x2*y1; } return Math.abs(s/2); }
+function densify(c, step=20){ const out=[c[0]]; for(let i=1;i<c.length;i++){ const a=c[i-1], b=c[i], d=hav(a,b), n=Math.floor(d/step); for(let k=1;k<=n;k++){ const t=k*step/d; if(t<1) out.push([a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t]); } out.push(b); } return out; }
+function clipRuns(c, poly){ const runs=[]; let cur=[]; densify(c).forEach(p => { if(inPoly(p,poly)) cur.push(p); else { if(cur.length>1) runs.push(cur); cur=[]; } }); if(cur.length>1) runs.push(cur); return runs; }
+function distPtSeg(p,a,b){ const k = Math.cos(rad(p[0])); const ax=(a[1]-p[1])*k, ay=a[0]-p[0], bx=(b[1]-p[1])*k, by=b[0]-p[0]; const dx=bx-ax, dy=by-ay; const L=dx*dx+dy*dy; let t = L ? -(ax*dx+ay*dy)/L : 0; t=Math.max(0,Math.min(1,t)); const x=ax+t*dx, y=ay+t*dy; return Math.sqrt(x*x+y*y)*111320; }
+function distPtLine(p,c){ if(c.length===1) return hav(p,c[0]); let m=Infinity; for(let i=1;i<c.length;i++) m=Math.min(m,distPtSeg(p,c[i-1],c[i])); return m; }
+const round5 = c => c.map(p=>[Math.round(p[0]*1e5)/1e5, Math.round(p[1]*1e5)/1e5]);
+function thin(c, minD=12){ const out=[c[0]]; for(let i=1;i<c.length-1;i++) if(hav(out[out.length-1],c[i])>=minD) out.push(c[i]); out.push(c[c.length-1]); return out; }
+
+/* ================= costanti ================= */
+const TIPI = {villette:'Villette', condominio:'Condomini', misto:'Misto'};
+const CANALI = {lettera:'Lettera', ripasso:'Ripasso porta a porta', segnalatore:'Segnalatore', passaparola:'Passaparola', altro:'Altro'};
+const STATI_C = { nuovo:{l:'Nuovo', c:'accent'}, appuntamento:{l:'Appuntamento', c:'amber'}, cliente:{l:'Cliente', c:'green'}, attesa:{l:'Da ricontattare', c:'purple'}, perso:{l:'Perso', c:'grey'} };
+const ESITI = {
+  no:{l:'No grazie', c:'red', s:'no'}, interessato:{l:'Interessato', c:'green', s:'int.'},
+  appuntamento:{l:'Appuntamento', c:'green', s:'app.'}, non_ripassare:{l:'Non ripassare', c:'red', s:'stop'},
+  affitto_prop:{l:'Paga il proprietario', c:'grey', s:'propr.'}, non_esiste:{l:'Non esiste', c:'grey', s:'—'},
+  biglietto:{l:'Biglietto lasciato', c:'amber', s:'bigl.'}
+};
+const PRIO = ['appuntamento','interessato','no','non_ripassare','affitto_prop','biglietto','non_esiste'];
+const DEF_IMP = {nostroLuce:0.108, nostroGas:null, pun:0.23, psv:null, gettoneLuce:40, gettoneGas:50, aggiornato:null};
+const HW_MAIN = ['primary','secondary','trunk'];
+const START = [45.7085, 11.4770];
+
+/* ================= stato e archivio (sul telefono) ================= */
+const LKEY = 'giro-lettere-mappa-v1';
+const S = {vie:{}, contatti:{}, imp:{...DEF_IMP}, piani:{}, meta:{ultimoBackup:null}};
+const V = {tab:'oggi', viaId:null, pianoId:null, filtroVie:'tutte', q:'', filtroCont:'tutti', qc:'', soloAperti:false, mode:'idle', draw:[], found:null, preview:null, loadingMsg:''};
+let storageOk = true;
+function load(){ try{ const o = JSON.parse(localStorage.getItem(LKEY)||'null'); if(o){ S.vie=o.vie||{}; S.contatti=o.contatti||{}; S.imp={...DEF_IMP,...(o.imp||{})}; S.piani=o.piani||{}; S.meta=o.meta||{ultimoBackup:null}; } }catch(e){ storageOk=false; } }
+function save(){ try{ localStorage.setItem(LKEY, JSON.stringify(S)); }catch(e){ storageOk=false; toast('Spazio sul telefono pieno o salvataggio bloccato: fai subito un backup.'); } }
+function putVia(id,v){ S.vie[id]=clone(v); save(); render(); }
+function putCont(id,c){ S.contatti[id]=clone(c); save(); render(); }
+function putPiano(id,p){ S.piani[id]=clone(p); save(); render(); }
+function putImp(i){ S.imp={...DEF_IMP,...i}; save(); render(); }
+try{ navigator.storage && navigator.storage.persist && navigator.storage.persist(); }catch(e){}
+
+/* ================= logica vie ================= */
+const cmpCiv = (x,y) => (parseInt(x)||0)-(parseInt(y)||0) || String(x).localeCompare(String(y));
+function civiciVia(v){
+  const out=[]; const a=parseInt(v.dal), b=parseInt(v.al);
+  if(a>0 && b>=a && b-a<=800){ for(let n=a;n<=b;n++){ if(v.lato==='pari'&&n%2) continue; if(v.lato==='dispari'&&!(n%2)) continue; out.push(String(n)); } }
+  (v.extra||[]).forEach(c => { if(!out.includes(c)) out.push(c); });
+  return out.sort(cmpCiv);
+}
+const giroCorrente = v => (v.giri && v.giri.length) ? v.giri[v.giri.length-1] : null;
+const lettereTot = v => (v.giri||[]).reduce((s,g)=>s+(Number(g.lettere)||0),0);
+const contattiDiVia = id => Object.entries(S.contatti).filter(([,k]) => k.viaId===id);
+function statoCivico(v,id,c){
+  if(Object.values(S.contatti).some(k => k.viaId===id && String(k.civico||'').trim()===c)) return 'contattato';
+  const es = (v.segnati||[]).filter(s => s.civico===c).map(s=>s.esito);
+  for(const p of PRIO) if(es.includes(p)) return p;
+  return 'aperto';
+}
+const civiciAperti = (v,id) => civiciVia(v).filter(c => statoCivico(v,id,c)==='aperto');
+function statoVia(v,id){
+  const g = giroCorrente(v);
+  if(!g) return {k:'dafare', l:'Da fare', c:'grey', ord:5, sub:''};
+  const gg = giorni(g.data, oggi()); const p = (g.passaggi||[]).length;
+  const aperti = civiciAperti(v,id).length;
+  if(p===0){
+    if(gg<7) return {k:'attesa', l:gg===0?'Lettera oggi':`Lettera da ${gg} gg`, c:'amber', ord:3, sub:`ripasso dal ${fmt(addDays(g.data,7))}`};
+    if(gg<=14) return {k:'ripassa', l:'Da ripassare', c:'orange', ord:1, sub:`lettera da ${gg} giorni`};
+    return {k:'ripassa', l:'Ripasso in ritardo', c:'red', ord:0, sub:`lettera da ${gg} giorni`};
+  }
+  const last = g.passaggi[p-1];
+  if(p===1 && aperti>0) return {k:'secondo', l:`2° giro · ${aperti}`, c:'orange', ord:2, sub:`1° passaggio di ${last.fascia}: prova un'altra fascia`};
+  const gl = giorni(last.data, oggi());
+  if(gl>=90) return {k:'rifare', l:'Da rifare', c:'purple', ord:4, sub:`ultimo passaggio ${gl} giorni fa`};
+  return {k:'fatta', l:'Fatta', c:'green', ord:6, sub: aperti ? `${aperti} civici mai trovati` : 'tutti i civici gestiti'};
+}
+function mapsLink(p){ return p ? `https://www.google.com/maps/dir/?api=1&destination=${p[0]},${p[1]}&travelmode=walking` : null; }
+
+/* ================= offerte da ricontattare ================= */
+function valutaOfferta(o){
+  const gas = o.fornitura==='gas', imp = S.imp;
+  const nostro = gas ? imp.nostroGas : imp.nostroLuce, rif = gas ? imp.psv : imp.pun, u = gas ? '€/Smc' : '€/kWh';
+  if(o.rivisto && giorni(o.rivisto, oggi()) < 30) return {on:false, msg:`Ricontattato il ${fmt(o.rivisto)}: ricontrollo dal ${fmt(addDays(o.rivisto,30))}`};
+  if(o.scadenza){ const d = giorni(oggi(), o.scadenza);
+    if(d<=30) return {on:true, msg: d<0 ? `Offerta scaduta il ${fmt(o.scadenza)}` : d===0 ? 'Offerta in scadenza oggi' : `Scade tra ${d} giorni (${fmt(o.scadenza)})`}; }
+  if(nostro==null) return {on:false, msg:`Imposta il nostro prezzo ${gas?'gas':'luce'} in Statistiche › Prezzi`};
+  if(o.tipo==='variabile'){
+    if(rif==null || o.spread==null) return {on:false, msg:`Serve ${gas?'il PSV':'il PUN'} del mese e lo spread`};
+    const costo = Number(rif)+Number(o.spread);
+    if(costo>nostro) return {on:true, msg:`Oggi paga circa ${prezzo(costo)} ${u}, il nostro è ${prezzo(nostro)}`};
+    return {on:false, msg:`Oggi paga circa ${prezzo(costo)} ${u}: avviso quando supera ${prezzo(nostro)}`};
+  }
+  if(o.prezzo!=null && Number(o.prezzo)>nostro && !o.scadenza) return {on:true, msg:`Il suo fisso ${prezzo(o.prezzo)} è sopra il nostro ${prezzo(nostro)}`};
+  return {on:false, msg: o.scadenza ? `Avviso 30 giorni prima della scadenza (${fmt(o.scadenza)})` : 'Aggiungi la data di scadenza per avere l’avviso'};
+}
+function avvisi(){ const out=[]; Object.entries(S.contatti).forEach(([id,k]) => (k.offerte||[]).forEach(o => { const r = valutaOfferta(o); if(r.on) out.push({id, k, o, msg:r.msg}); })); return out; }
+
+/* ================= OpenStreetMap: vie dentro l'area ================= */
+const OVERPASS = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter'];
+async function fetchOSM(poly){
+  const ps = poly.map(p=>p[0].toFixed(6)+' '+p[1].toFixed(6)).join(' ');
+  const q = `[out:json][timeout:60];
+way(poly:"${ps}")["highway"~"^(residential|living_street|unclassified|tertiary|secondary|primary|pedestrian|service|road)$"]["name"];
+out geom;
+(node(poly:"${ps}")["addr:housenumber"]["addr:street"];way(poly:"${ps}")["addr:housenumber"]["addr:street"];);
+out center;`;
+  let lastErr = null;
+  for(const url of OVERPASS){
+    try{
+      const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), 70000);
+      const r = await fetch(url, {method:'POST', body:'data='+encodeURIComponent(q), headers:{'Content-Type':'application/x-www-form-urlencoded'}, signal:ctl.signal});
+      clearTimeout(t);
+      if(!r.ok){ lastErr = new Error('HTTP '+r.status); continue; }
+      return await r.json();
+    }catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error('rete');
+}
+function chainWays(lines){
+  const K = p => p[0].toFixed(6)+','+p[1].toFixed(6);
+  const rem = lines.map(l=>l.slice()); const chains=[];
+  while(rem.length){
+    let c = rem.shift(); let grown = true;
+    while(grown){ grown=false;
+      for(let i=0;i<rem.length;i++){ const l=rem[i]; const cs=K(c[0]), ce=K(c[c.length-1]), ls=K(l[0]), le=K(l[l.length-1]);
+        if(ce===ls) c=c.concat(l.slice(1)); else if(ce===le) c=c.concat(l.slice().reverse().slice(1));
+        else if(cs===le) c=l.concat(c.slice(1)); else if(cs===ls) c=l.slice().reverse().concat(c.slice(1)); else continue;
+        rem.splice(i,1); grown=true; break; } }
+    chains.push(c);
+  }
+  return chains;
+}
+function buildSegments(osm, poly){
+  const els = (osm && osm.elements) || [];
+  const byName = {};
+  els.filter(e => e.type==='way' && e.tags && e.tags.highway && e.tags.name && e.geometry && !e.tags['addr:housenumber']).forEach(w => {
+    const k = w.tags.name; (byName[k] = byName[k] || {lines:[], hw:new Set()}); byName[k].lines.push(w.geometry.map(g=>[g.lat,g.lon])); byName[k].hw.add(w.tags.highway); });
+  const segs = [];
+  Object.entries(byName).forEach(([name, o]) => {
+    let pieces = []; chainWays(o.lines).forEach(c => clipRuns(c, poly).forEach(r => pieces.push(r)));
+    pieces = pieces.map(p => ({c:p, len:lineLen(p)})).filter(p => p.len>=25).sort((a,b)=>b.len-a.len);
+    const kept = [];
+    pieces.forEach(p => { const probes = [p.c[0], p.c[Math.floor(p.c.length/2)], p.c[p.c.length-1]];
+      if(kept.some(k => probes.every(q => distPtLine(q, k.c) < 35))) return; kept.push(p); });
+    const main = [...o.hw].some(h => HW_MAIN.includes(h));
+    kept.forEach((p,i) => segs.push({key:name+'#'+i, nome: name + (kept.length>1 ? ' · tratto '+(i+1) : ''), base:name, coords: round5(thin(p.c)), len:p.len, main, civici:[], sel:true}));
+  });
+  els.filter(e => e.tags && e.tags['addr:housenumber'] && e.tags['addr:street']).forEach(a => {
+    const pt = a.type==='node' ? [a.lat,a.lon] : (a.center ? [a.center.lat,a.center.lon] : null); if(!pt) return;
+    const cand = segs.filter(s => normName(s.base)===normName(a.tags['addr:street'])); if(!cand.length) return;
+    let best = cand[0], bd = Infinity; cand.forEach(s => { const d = distPtLine(pt, s.coords); if(d<bd){ bd=d; best=s; } });
+    String(a.tags['addr:housenumber']).split(/[;,]/).map(h=>h.trim()).filter(Boolean).forEach(h => { if(!best.civici.includes(h)) best.civici.push(h); });
+  });
+  segs.forEach(s => s.civici.sort(cmpCiv));
+  return segs.sort((a,b)=>a.nome.localeCompare(b.nome,'it'));
+}
+
+/* ================= percorso più corto (approssimato) ================= */
+function planRoute(segs, start){
+  const n = segs.length; if(!n) return {tour:[], walk:0, tot:0};
+  const A = i => segs[i].coords[0], B = i => segs[i].coords[segs[i].coords.length-1];
+  const sp = (i,d) => d ? B(i) : A(i), ep = (i,d) => d ? A(i) : B(i);
+  const cost = t => { let c = start ? hav(start, sp(t[0][0],t[0][1])) : 0; for(let k=0;k<t.length-1;k++) c += hav(ep(t[k][0],t[k][1]), sp(t[k+1][0],t[k+1][1])); return c; };
+  let cur = start || A(0); const used = new Array(n).fill(false); let tour = [];
+  for(let k=0;k<n;k++){ let bi=-1, bd=0, bx=Infinity;
+    for(let i=0;i<n;i++){ if(used[i]) continue; for(const d of [0,1]){ const x = hav(cur, sp(i,d)); if(x<bx){ bx=x; bi=i; bd=d; } } }
+    used[bi]=true; tour.push([bi,bd]); cur = ep(bi,bd); }
+  let best = cost(tour), improved = true, it = 0;
+  while(improved && it<40){ improved=false; it++;
+    for(let i=0;i<n;i++) for(let j=i;j<n;j++){
+      const t2 = tour.slice(0,i).concat(tour.slice(i,j+1).reverse().map(([s,d])=>[s,1-d]), tour.slice(j+1));
+      const c = cost(t2); if(c < best-0.5){ tour=t2; best=c; improved=true; } }
+    for(let i=0;i<n;i++){ const item = tour[i]; const rest = tour.slice(0,i).concat(tour.slice(i+1));
+      for(let j=0;j<=rest.length;j++) for(const d of [0,1]){ if(j===i && d===item[1]) continue;
+        const t2 = rest.slice(0,j).concat([[item[0],d]], rest.slice(j)); const c = cost(t2);
+        if(c < best-0.5){ tour=t2; best=c; improved=true; } } }
+  }
+  const walk = tour.reduce((s,[i])=>s+segs[i].len,0);
+  return {tour, walk, trans:best, tot:walk+best};
+}
+
+/* ================= mappa ================= */
+let map = null, layers = null, meMarker = null, mePos = null, watchId = null;
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const lineColor = c => cssVar('--line-'+c) || '#4C4CA0';
+function ensureMap(){
+  if(map || !window.L) return !!map;
+  map = L.map('map', {zoomControl:false, attributionControl:true}).setView(START, 15);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'© OpenStreetMap'}).addTo(map);
+  L.control.zoom({position:'bottomright'}).addTo(map);
+  layers = L.layerGroup().addTo(map);
+  map.on('click', e => { if(V.mode==='draw'){ V.draw.push([e.latlng.lat, e.latlng.lng]); drawMap(); render(); } });
+  return true;
+}
+function stepIcon(n, cur){ return L.divIcon({className:'', html:`<div class="stepnum${cur?' cur':''}">${n}</div>`, iconSize: cur?[32,32]:[26,26], iconAnchor: cur?[16,16]:[13,13]}); }
+function drawMap(){
+  if(!map) return; layers.clearLayers();
+  const accent = lineColor('accent');
+  if(V.mode==='draw' || V.mode==='loading'){
+    if(V.draw.length>1) L.polygon(V.draw, {color:accent, weight:3, fillOpacity:.12, dashArray: V.draw.length<3?'6 6':null}).addTo(layers);
+    V.draw.forEach((p,i) => L.marker(p, {icon:L.divIcon({className:'', html:`<div class="vtx${i===0?' first':''}"></div>`, iconSize:[20,20], iconAnchor:[10,10]}), interactive:false}).addTo(layers));
+    return;
+  }
+  if(V.mode==='review' && V.found){
+    L.polygon(V.found.area, {color:accent, weight:2, fillOpacity:.06, dashArray:'6 6', interactive:false}).addTo(layers);
+    const pv = V.preview;
+    V.found.segs.forEach(s => L.polyline(s.coords, {color: s.sel ? accent : lineColor('grey'), weight: s.sel?5:3, opacity: s.sel?0.9:0.5}).addTo(layers));
+    if(pv){ let prev = V.found.start;
+      pv.order.forEach(([i,d],k) => { const s = V.found.segs[i]; const a = d ? s.coords[s.coords.length-1] : s.coords[0];
+        if(prev) L.polyline([prev,a], {color:lineColor('grey'), weight:2, dashArray:'4 6', interactive:false}).addTo(layers);
+        L.marker(a, {icon:stepIcon(k+1,false), interactive:false}).addTo(layers); prev = d ? s.coords[0] : s.coords[s.coords.length-1]; }); }
+    return;
+  }
+  const p = V.pianoId && S.piani[V.pianoId];
+  if(p){
+    if(p.area) L.polygon(p.area, {color:accent, weight:2, fillOpacity:.04, dashArray:'6 6', interactive:false}).addTo(layers);
+    let prev = null;
+    p.ordine.forEach((st,k) => { const v = S.vie[st.viaId]; if(!v || !v.geom || v.geom.length<2) return;
+      const s = statoVia(v, st.viaId); const cur = k===p.pos;
+      const g = st.dir ? v.geom.slice().reverse() : v.geom;
+      if(prev) L.polyline([prev, g[0]], {color:lineColor('grey'), weight:2, dashArray:'4 6', interactive:false}).addTo(layers);
+      const pl = L.polyline(g, {color:lineColor(s.c), weight: cur?8:5, opacity: cur?1:0.85}).addTo(layers);
+      pl.on('click', () => { if(V.mode==='idle'){ p.pos = k; putPiano(V.pianoId, p); drawMap(); } });
+      L.marker(g[0], {icon:stepIcon(k+1,cur), zIndexOffset: cur?1000:0, interactive:false}).addTo(layers);
+      prev = g[g.length-1]; });
+    return;
+  }
+  Object.entries(S.vie).forEach(([id,v]) => { if(v.geom && v.geom.length>1) L.polyline(v.geom, {color:lineColor(statoVia(v,id).c), weight:5, opacity:.85}).on('click',()=>{ openVia(id); }).addTo(layers); });
+}
+function fitMap(){
+  if(!map) return; const b = [];
+  if(V.mode==='draw') V.draw.forEach(p=>b.push(p));
+  else if(V.mode==='review' && V.found) V.found.segs.forEach(s=>s.coords.forEach(c=>b.push(c)));
+  else if(V.pianoId && S.piani[V.pianoId]){ const p = S.piani[V.pianoId]; if(p.area) p.area.forEach(c=>b.push(c)); }
+  else Object.values(S.vie).forEach(v => (v.geom||[]).forEach(c=>b.push(c)));
+  if(b.length>1) map.fitBounds(b, {padding:[30,30], maxZoom:17}); else if(mePos) map.setView(mePos, 16);
+}
+function focusStep(){
+  const p = V.pianoId && S.piani[V.pianoId]; if(!map || !p) return; const st = p.ordine[p.pos]; const v = st && S.vie[st.viaId];
+  if(v && v.geom && v.geom.length) map.fitBounds(v.geom, {padding:[60,60], maxZoom:18});
+}
+function toggleGPS(){
+  if(watchId!==null){ navigator.geolocation.clearWatch(watchId); watchId=null; if(meMarker){ meMarker.remove(); meMarker=null; } $('#btn-gps').setAttribute('aria-pressed','false'); return; }
+  if(!navigator.geolocation){ toast('Questo telefono non dà la posizione.'); return; }
+  $('#btn-gps').setAttribute('aria-pressed','true');
+  let first = true;
+  watchId = navigator.geolocation.watchPosition(pos => {
+    mePos = [pos.coords.latitude, pos.coords.longitude];
+    if(!map) return;
+    if(!meMarker) meMarker = L.marker(mePos, {icon:L.divIcon({className:'', html:'<div class="me"></div>', iconSize:[24,24], iconAnchor:[12,12]}), interactive:false, zIndexOffset:2000}).addTo(map);
+    else meMarker.setLatLng(mePos);
+    if(first){ map.setView(mePos, Math.max(map.getZoom(),16)); first=false; }
+  }, err => { toast(err.code===1 ? 'Posizione negata: attivala nelle impostazioni del browser.' : 'Posizione non disponibile.'); $('#btn-gps').setAttribute('aria-pressed','false'); watchId=null; }, {enableHighAccuracy:true, maximumAge:5000, timeout:20000});
+}
+
+/* ================= statistiche ================= */
+function calcola(){
+  const vie = Object.entries(S.vie), cont = Object.values(S.contatti);
+  const lettere = vie.reduce((s,[,v])=>s+lettereTot(v),0);
+  const clienti = cont.filter(k=>k.luce||k.gas);
+  const nLuce = cont.filter(k=>k.luce).length, nGas = cont.filter(k=>k.gas).length;
+  const daLettera = cont.filter(k => k.viaId && (k.canale==='lettera'||k.canale==='ripasso'));
+  const gruppi = keyOf => { const m = {};
+    vie.forEach(([id,v]) => { const key = keyOf(v); m[key] = m[key] || {lettere:0, contatti:0, clienti:0}; m[key].lettere += lettereTot(v); });
+    cont.forEach(k => { if(!k.viaId || !S.vie[k.viaId]) return; const key = keyOf(S.vie[k.viaId]); if(!m[key]) return; if(k.canale==='lettera'||k.canale==='ripasso') m[key].contatti++; if(k.luce||k.gas) m[key].clienti++; });
+    return m; };
+  const esiti = {}; let civTot = 0, civPassati = 0;
+  vie.forEach(([id,v]) => { (v.segnati||[]).forEach(s => { esiti[s.esito] = (esiti[s.esito]||0)+1; });
+    const g = giroCorrente(v); if(g && (g.passaggi||[]).length){ const cs = civiciVia(v); civTot += cs.length; civPassati += cs.filter(c=>statoCivico(v,id,c)!=='aperto').length; } });
+  const canali = {}; cont.forEach(k => { const c = k.canale||'altro'; canali[c] = canali[c]||{contatti:0, clienti:0}; canali[c].contatti++; if(k.luce||k.gas) canali[c].clienti++; });
+  const ks = vie.map(([id,v]) => statoVia(v,id).k);
+  return { lettere, nVie:vie.length, vieFatte: ks.filter(k=>k==='fatta'||k==='rifare').length,
+    vieRipassate: vie.filter(([,v]) => (v.giri||[]).some(g => (g.passaggi||[]).length)).length,
+    contatti: cont.length, clienti: clienti.length, nLuce, nGas, lordo: nLuce*(S.imp.gettoneLuce||0)+nGas*(S.imp.gettoneGas||0),
+    daLettera: daLettera.length, perTipo: gruppi(v=>v.tipo||'misto'), perZona: gruppi(v=>(v.zona||'Senza zona').trim()||'Senza zona'), esiti, civTot, civPassati, canali };
+}
+function progressoPiano(p){
+  const vs = p.ordine.map(st => S.vie[st.viaId]).filter(Boolean);
+  const lett = vs.filter(v => { const g = giroCorrente(v); return g && g.data >= p.creato; }).length;
+  const rip = vs.filter(v => { const g = giroCorrente(v); return g && g.data >= p.creato && (g.passaggi||[]).length; }).length;
+  return {tot:vs.length, lett, rip};
+}
+
+/* ================= render ================= */
+const ICON = {
+  oggi:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/></svg>',
+  mappa:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>',
+  vie:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"/></svg>',
+  contatti:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>',
+  stats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V11M12 20V5M19 20v-6"/></svg>'
+};
+const pill = (l,c) => `<span class="pill c-${c}">${esc(l)}</span>`;
+
+function render(){
+  renderTabs();
+  const app = $('#app');
+  const showMap = V.tab==='mappa' && !V.viaId;
+  const mb = $('#mapbox');
+  if(showMap){ if(mb.hidden){ mb.hidden=false; if(ensureMap()){ setTimeout(()=>{ map.invalidateSize(); drawMap(); }, 30); } } else drawMap(); }
+  else mb.hidden = true;
+  const hint = $('#maphint');
+  if(showMap && V.mode==='draw'){ hint.hidden=false; hint.textContent = V.draw.length===0 ? 'Tocca la mappa dove parti: è il primo angolo della zona.' : V.draw.length<3 ? 'Tocca gli altri angoli della zona.' : `${V.draw.length} angoli. Aggiungine o tocca “Cerca vie”.`; }
+  else hint.hidden = true;
+  let banner = '';
+  if(!storageOk) banner = '<div class="banner">Il telefono non sta salvando i dati: scarica subito il backup.</div>';
+  let html;
+  if(V.viaId && S.vie[V.viaId]) html = viewVia(V.viaId);
+  else if(V.tab==='mappa') html = viewMappa();
+  else if(V.tab==='vie') html = viewVie();
+  else if(V.tab==='contatti') html = viewContatti();
+  else if(V.tab==='stats') html = viewStats();
+  else html = viewOggi();
+  app.innerHTML = banner + html;
+}
+function renderTabs(){
+  const n = avvisi().length;
+  $('#tabs').innerHTML = [['oggi','Oggi'],['mappa','Mappa'],['vie','Vie'],['contatti','Contatti'],['stats','Numeri']].map(([k,l]) =>
+    `<button class="tab" data-act="tab" data-k="${k}" ${V.tab===k&&!V.viaId?'aria-current="page"':''}>${ICON[k]}<span>${l}</span>${k==='oggi'&&n?`<span class="badge">${n}</span>`:''}</button>`).join('');
+}
+function rowVia(id,v,num){
+  const st = statoVia(v,id); const g = giroCorrente(v); const nc = civiciVia(v).length;
+  const info = [TIPI[v.tipo]||'', nc?`${nc} civici`:'', g?`${lettereTot(v)} lettere`:''].filter(Boolean).join(' · ');
+  return `<button class="row" data-act="open-via" data-id="${id}">${num!=null?`<span class="n">${num}</span>`:''}<div class="row-main"><div class="row-t">${esc(v.nome)}</div><div class="row-s">${esc(st.sub || info)}</div></div>${pill(st.l, st.c)}</button>`;
+}
+function rowCont(id,k,extra){
+  const st = STATI_C[k.stato]||STATI_C.nuovo; const via = k.viaId && S.vie[k.viaId];
+  const dove = via ? `${via.nome}${k.civico?' '+k.civico:''}` : (k.indirizzo||CANALI[k.canale]||'');
+  const tags = [k.luce?'luce':'', k.gas?'gas':''].filter(Boolean).join(' + ');
+  return `<button class="row" data-act="open-cont" data-id="${id}"><div class="row-main"><div class="row-t">${esc(k.nome||'Senza nome')}</div><div class="row-s">${esc(extra || [dove, tags].filter(Boolean).join(' · '))}</div></div>${pill(st.l, st.c)}</button>`;
+}
+
+function viewOggi(){
+  const c = calcola(); const al = avvisi();
+  const vie = Object.entries(S.vie).map(([id,v]) => ({id, v, st:statoVia(v,id)}));
+  const ripassa = vie.filter(x => ['ripassa','secondo'].includes(x.st.k)).sort((a,b)=>a.st.ord-b.st.ord);
+  const attesa = vie.filter(x => x.st.k==='attesa');
+  const rifare = vie.filter(x => x.st.k==='rifare');
+  const app = Object.entries(S.contatti).filter(([,k]) => k.stato==='appuntamento').sort((a,b)=>String((a[1].dataApp||'9')+(a[1].oraApp||'')).localeCompare(String((b[1].dataApp||'9')+(b[1].oraApp||''))));
+  const nuovi = Object.entries(S.contatti).filter(([,k]) => k.stato==='nuovo');
+  const piani = Object.entries(S.piani).sort((a,b)=>String(b[1].creato).localeCompare(String(a[1].creato)));
+  const giorno = new Date().toLocaleDateString('it-IT',{weekday:'long', day:'numeric', month:'long'});
+  const hasData = Object.keys(S.vie).length || Object.keys(S.contatti).length;
+  const bk = S.meta.ultimoBackup; const needBk = hasData && (!bk || giorni(bk, oggi())>=7);
+  let h = needBk ? `<div class="banner"><span>I dati sono solo su questo telefono. ${bk?'Ultimo backup '+fmt(bk)+'.':'Non hai ancora fatto un backup.'}</span><button class="btn btn-sm" data-act="export">Scarica backup</button></div>` : '';
+  h += `<div class="top"><div><h1>Oggi</h1><div class="date">${esc(giorno)} · fascia ${fasciaOra()}</div></div></div>
+  <div class="kpis"><div class="kpi"><b>${num(c.lettere)}</b><span>lettere</span></div><div class="kpi"><b>${num(c.contatti)}</b><span>contatti</span></div><div class="kpi"><b>${num(c.clienti)}</b><span>clienti</span></div></div>
+  <div class="quick" style="margin-top:10px"><button class="btn btn-p" data-act="new-zone">+ Nuova zona sulla mappa</button><button class="btn" data-act="new-cont">+ Contatto</button></div>`;
+  if(al.length) h += `<div class="sec"><div class="sec-h"><h2>Da ricontattare ora</h2><span class="small">${al.length}</span></div><div class="list alert">${al.map(a => rowCont(a.id, a.k, `${a.o.fornitura==='gas'?'Gas':'Luce'}: ${a.msg}`)).join('')}</div></div>`;
+  if(piani.length) h += `<div class="sec"><div class="sec-h"><h2>Giri pianificati</h2><span class="small">${piani.length}</span></div><div class="list">${piani.map(([pid,p]) => { const pr = progressoPiano(p);
+      return `<button class="row" data-act="open-piano" data-id="${pid}"><div class="row-main"><div class="row-t">${esc(p.nome)}</div><div class="row-s">${pr.tot} vie · lettere ${pr.lett}/${pr.tot} · ripassate ${pr.rip}/${pr.tot}${p.dist?' · '+km(p.dist):''}</div></div>${pill(pr.rip===pr.tot&&pr.tot?'Finito':pr.lett?'In corso':'Da iniziare', pr.rip===pr.tot&&pr.tot?'green':pr.lett?'amber':'grey')}</button>`; }).join('')}</div></div>`;
+  h += `<div class="sec"><div class="sec-h"><h2>Da ripassare</h2><span class="small">${ripassa.length}</span></div>${ripassa.length?`<div class="list">${ripassa.map(x=>rowVia(x.id,x.v)).join('')}</div>`:`<div class="card empty">Nessuna via da ripassare. Le vie compaiono qui 7 giorni dopo la lettera.</div>`}</div>`;
+  if(app.length) h += `<div class="sec"><div class="sec-h"><h2>Appuntamenti</h2><span class="small">${app.length}</span></div><div class="list">${app.map(([id,k])=>rowCont(id,k,[k.dataApp?fmt(k.dataApp)+(k.oraApp?' '+k.oraApp:''):'data da fissare', k.telefono].filter(Boolean).join(' · '))).join('')}</div></div>`;
+  if(nuovi.length) h += `<div class="sec"><div class="sec-h"><h2>Contatti da gestire</h2><span class="small">${nuovi.length}</span></div><div class="list">${nuovi.map(([id,k])=>rowCont(id,k)).join('')}</div></div>`;
+  if(attesa.length) h += `<div class="sec"><div class="sec-h"><h2>Lettera messa, in attesa</h2><span class="small">${attesa.length}</span></div><div class="list">${attesa.map(x=>rowVia(x.id,x.v)).join('')}</div></div>`;
+  if(rifare.length) h += `<div class="sec"><div class="sec-h"><h2>Zone da rifare (oltre 3 mesi)</h2><span class="small">${rifare.length}</span></div><div class="list">${rifare.map(x=>rowVia(x.id,x.v)).join('')}</div></div>`;
+  if(!hasData) h += `<div class="sec"><div class="card empty">Inizia dalla mappa: disegna la zona dove vuoi mettere le lettere e l’app trova le vie e il percorso.<br><br><button class="btn btn-p" data-act="new-zone">Disegna la prima zona</button></div></div>`;
+  return h;
+}
+
+function viewMappa(){
+  if(!window.L) return `<div class="card empty">La mappa non si è caricata. Controlla la connessione e ricarica la pagina.</div>`;
+  if(V.mode==='draw'){
+    const area = polyArea(V.draw);
+    return `<div class="card status"><div class="status-l"><b>Disegna la zona</b><span class="meta">${V.draw.length>=3?'circa '+num(area/1e6,2)+' km²':''}</span></div>
+      <div class="small">Il primo punto (verde) è da dove parti. Tocca gli angoli della zona in ordine, anche solo 4. Meglio zone da 10–40 vie.</div>
+      ${area>2.5e6?'<div class="hint">Zona grande: la ricerca può essere lenta e il giro lunghissimo. Meglio dividerla in due.</div>':''}
+      <div class="btns"><button class="btn" data-act="draw-undo" ${V.draw.length?'':'disabled'}>Togli ultimo</button><button class="btn" data-act="draw-cancel">Annulla</button></div>
+      <button class="btn btn-p btn-big" data-act="draw-done" ${V.draw.length>=3?'':'disabled'}>Cerca le vie</button></div>`;
+  }
+  if(V.mode==='loading') return `<div class="card empty"><span class="spin"></span><br><br>${esc(V.loadingMsg||'Cerco le vie su OpenStreetMap…')}<br><span class="small">Di solito 5–30 secondi.</span></div>`;
+  if(V.mode==='review' && V.found){
+    const F = V.found; const sel = F.segs.filter(s=>s.sel); const civ = sel.reduce((s,x)=>s+x.civici.length,0);
+    const pv = V.preview;
+    return `<div class="card status">
+      <div class="status-l"><b>${F.segs.length} vie trovate</b><span class="meta">${sel.length} scelte · ${civ} civici sulla mappa</span></div>
+      <div class="f"><label for="z-nome">Nome della zona</label><input id="z-nome" value="${esc(F.nome)}" autocomplete="off"></div>
+      <div class="f"><span class="lbl">Tipo di case</span>${seg('ztipo', TIPI, F.tipo||'misto')}</div>
+      ${pv?`<div class="hint">Percorso: ${sel.length} vie, circa <b>${km(pv.tot)}</b> a piedi (${km(pv.walk)} lungo le vie, ${km(pv.trans)} di spostamenti). I numeri sulla mappa sono l’ordine.</div>`:''}
+      <button class="btn btn-p btn-big" data-act="save-plan" ${sel.length?'':'disabled'}>Salva il giro</button>
+      <button class="btn" data-act="draw-cancel">Annulla</button>
+    </div>
+    <div class="sec"><div class="sec-h"><h2>Vie nella zona</h2><span class="small">togli quelle che non vuoi</span></div>
+    <div class="list">${F.segs.map((s,i)=>`<label class="row" style="cursor:pointer"><input type="checkbox" data-act="seg-sel" data-i="${i}" ${s.sel?'checked':''} style="width:22px;height:22px;accent-color:var(--accent);flex:0 0 22px"><div class="row-main"><div class="row-t">${esc(s.nome)}</div><div class="row-s">${km(s.len)}${s.civici.length?' · '+s.civici.length+' civici':' · civici da inserire'}${s.main?' · strada trafficata':''}</div></div></label>`).join('')}</div></div>
+    <p class="small" style="margin-top:12px">Vie e civici da OpenStreetMap. I civici possono essere incompleti: li correggi nella via.</p>`;
+  }
+  const piani = Object.entries(S.piani).sort((a,b)=>String(b[1].creato).localeCompare(String(a[1].creato)));
+  const p = V.pianoId && S.piani[V.pianoId];
+  if(p) return viewGuida(V.pianoId, p);
+  return `<button class="btn btn-p btn-big" data-act="new-zone">+ Nuova zona</button>
+    <div class="sec"><div class="sec-h"><h2>I tuoi giri</h2><span class="small">${piani.length}</span></div>
+    ${piani.length?`<div class="list">${piani.map(([pid,pp]) => { const pr = progressoPiano(pp); return `<button class="row" data-act="open-piano" data-id="${pid}"><div class="row-main"><div class="row-t">${esc(pp.nome)}</div><div class="row-s">${pr.tot} vie · lettere ${pr.lett}/${pr.tot} · ripassate ${pr.rip}/${pr.tot}</div></div>${pill(fmt(pp.creato),'accent')}</button>`; }).join('')}</div>`
+      :'<div class="card empty">Ancora nessun giro. Tocca “Nuova zona”, disegna l’area sulla mappa e l’app trova vie e percorso.</div>'}</div>`;
+}
+function viewGuida(pid, p){
+  const tot = p.ordine.length; const pos = Math.min(p.pos||0, tot-1); const st = p.ordine[pos]; const v = st && S.vie[st.viaId];
+  const pr = progressoPiano(p);
+  if(!v) return `<div class="card empty">Le vie di questo giro sono state eliminate.</div><button class="btn" data-act="close-piano">Chiudi giro</button>`;
+  const s = statoVia(v, st.viaId); const g = giroCorrente(v);
+  const geo = v.geom ? (st.dir ? v.geom[v.geom.length-1] : v.geom[0]) : null;
+  const nc = civiciVia(v).length; const ap = civiciAperti(v, st.viaId).length;
+  const letteraFatta = g && g.data >= p.creato;
+  const passOggi = g && (g.passaggi||[]).some(x => x.data===oggi() && x.fascia===fasciaOra());
+  let azione;
+  if(!letteraFatta) azione = `<button class="btn btn-p btn-big" data-act="lettera" data-id="${st.viaId}" data-guide="1">Lettera messa${nc?' · '+nc:''}</button>`;
+  else if(['ripassa','secondo'].includes(s.k) && !passOggi) azione = `<button class="btn btn-p btn-big" data-act="passaggio" data-id="${st.viaId}">Sto ripassando ora · ${fasciaOra()}</button>`;
+  else if(passOggi) azione = `<button class="btn btn-p btn-big" data-act="open-via" data-id="${st.viaId}">Segna i civici (${ap} da trovare)</button>`;
+  else azione = `<div class="hint">${esc(s.sub || s.l)}</div>`;
+  return `<div class="card guide">
+    <div class="status-l"><span class="meta">${esc(p.nome)} · via ${pos+1} di ${tot}</span>${pill(s.l, s.c)}</div>
+    <div class="prog" aria-hidden="true"><i style="width:${tot?Math.round(pr.lett/tot*100):0}%"></i></div>
+    <div class="guide-t">${esc(v.nome)}</div>
+    <div class="meta">${esc([TIPI[v.tipo], nc?`${nc} civici`:'civici da inserire', v.geom?km(lineLen(v.geom)):''].filter(Boolean).join(' · '))}</div>
+    ${azione}
+    <div class="btns"><button class="btn" data-act="step" data-d="-1" ${pos>0?'':'disabled'}>‹ Prec.</button>${geo?`<a class="btn" href="${mapsLink(geo)}" target="_blank" rel="noopener">Portami qui</a>`:''}<button class="btn ${letteraFatta?'btn-p':''}" data-act="step" data-d="1" ${pos<tot-1?'':'disabled'}>Prossima ›</button></div>
+    <button class="btn btn-sm" data-act="open-via" data-id="${st.viaId}">Apri la via (civici, contatti, note)</button>
+  </div>
+  <div class="sec"><div class="sec-h"><h2>Ordine del giro</h2><span class="small">lettere ${pr.lett}/${tot} · ripassate ${pr.rip}/${tot}</span></div>
+  <div class="list">${p.ordine.map((o,k) => { const vv = S.vie[o.viaId]; if(!vv) return ''; const ss = statoVia(vv, o.viaId);
+     return `<button class="row${k===pos?' cur':''}" data-act="goto-step" data-k="${k}"><span class="n">${k+1}</span><div class="row-main"><div class="row-t">${esc(vv.nome)}</div><div class="row-s">${esc(ss.sub || (civiciVia(vv).length ? civiciVia(vv).length+' civici' : 'civici da inserire'))}</div></div>${pill(ss.l, ss.c)}</button>`; }).join('')}</div></div>
+  <div class="sec"><div class="btns"><button class="btn" data-act="close-piano">Tutti i giri</button><button class="btn" data-act="replan" data-id="${pid}">Ricalcola da qui</button></div>
+  <div class="danger-zone" id="dz"><button class="btn btn-sm btn-danger" data-act="ask-del" data-what="piano" data-id="${pid}">Elimina giro</button><span class="small">Le vie e i dati restano.</span></div></div>`;
+}
+
+function viewVie(){
+  const F = [['tutte','Tutte'],['dafare','Da fare'],['attesa','In attesa'],['ripassare','Da ripassare'],['fatte','Fatte']];
+  const q = V.q.trim().toLowerCase();
+  let items = Object.entries(S.vie).map(([id,v]) => ({id,v,st:statoVia(v,id)}));
+  if(q) items = items.filter(x => (x.v.nome+' '+(x.v.zona||'')).toLowerCase().includes(q));
+  const f = V.filtroVie;
+  if(f==='dafare') items = items.filter(x=>x.st.k==='dafare');
+  if(f==='attesa') items = items.filter(x=>x.st.k==='attesa');
+  if(f==='ripassare') items = items.filter(x=>['ripassa','secondo'].includes(x.st.k));
+  if(f==='fatte') items = items.filter(x=>['fatta','rifare'].includes(x.st.k));
+  const zone = {}; items.forEach(x => { const z = (x.v.zona||'').trim() || 'Senza zona'; (zone[z] = zone[z]||[]).push(x); });
+  let h = `<div class="top"><h1>Vie</h1><button class="btn btn-sm" data-act="new-via">+ Via a mano</button></div>
+  <input class="search" id="q-vie" type="search" placeholder="Cerca via o zona" value="${esc(V.q)}" aria-label="Cerca via o zona">
+  <div class="chips" style="margin-top:10px">${F.map(([k,l])=>`<button class="chip" data-act="fvie" data-k="${k}" aria-pressed="${V.filtroVie===k}">${l}</button>`).join('')}</div>`;
+  if(!items.length) return h + `<div class="sec"><div class="card empty">${Object.keys(S.vie).length?'Nessuna via con questo filtro.':'Ancora nessuna via. Disegna una zona nella Mappa, oppure aggiungine una a mano.'}</div></div>`;
+  Object.keys(zone).sort((a,b)=>a.localeCompare(b,'it')).forEach(z => { const arr = zone[z].sort((a,b)=>a.st.ord-b.st.ord || a.v.nome.localeCompare(b.v.nome,'it'));
+    h += `<div class="sec"><div class="sec-h"><div class="zona">${esc(z)}</div><span class="small">${arr.length} vie · ${num(arr.reduce((s,x)=>s+lettereTot(x.v),0))} lettere</span></div><div class="list">${arr.map(x=>rowVia(x.id,x.v)).join('')}</div></div>`; });
+  return h;
+}
+
+function viewVia(id){
+  const v = S.vie[id]; const st = statoVia(v,id); const g = giroCorrente(v);
+  const civ = civiciVia(v); const aperti = civiciAperti(v,id);
+  const p = g ? (g.passaggi||[]).length : 0;
+  const passOggi = g && (g.passaggi||[]).some(x => x.data===oggi() && x.fascia===fasciaOra());
+  let azioni = '';
+  if(!g) azioni = `<button class="btn btn-p btn-big" data-act="lettera" data-id="${id}">Lettera messa oggi</button>`;
+  else {
+    azioni = passOggi ? `<div class="hint">Passaggio di oggi (${fasciaOra()}) registrato. Tocca i civici dove qualcuno risponde; quelli che lasci così restano “non c’era”.</div>`
+      : `<button class="btn btn-p btn-big" data-act="passaggio" data-id="${id}">Sto ripassando ora · ${fasciaOra()}</button>`;
+    if(p>=2 && aperti.length) azioni += `<button class="btn" data-act="biglietti" data-id="${id}">Biglietto lasciato ai ${aperti.length} civici rimasti</button>`;
+    if(['fatta','rifare'].includes(st.k)) azioni += `<button class="btn" data-act="lettera" data-id="${id}">Nuovo giro di lettere</button>`;
+  }
+  const passaggi = g && p ? `<div class="pass">${g.passaggi.map((x,i)=>pill(`${i+1}° · ${fmt(x.data)} · ${x.fascia}`,'accent')).join('')}</div>` : '';
+  const hint = (st.k==='secondo' && !passOggi) ? `<div class="hint">Restano ${aperti.length} civici dove non hai trovato nessuno. Ripassa in un’altra fascia oraria (sera o sabato).</div>` : '';
+  const shown = V.soloAperti ? aperti : civ;
+  const grid = civ.length ? `<div class="grid">${shown.map(c => { const s = statoCivico(v,id,c);
+      const cls = s==='aperto' ? '' : s==='contattato' ? 'c-accent' : 'c-'+ESITI[s].c;
+      const lab = s==='aperto' ? '' : s==='contattato' ? 'contatto' : ESITI[s].s;
+      const cog = (v.segnati||[]).filter(x=>x.civico===c && x.cognome).length;
+      return `<button class="civ ${cls}" data-act="civico" data-id="${id}" data-c="${esc(c)}" aria-label="Civico ${esc(c)}${lab?', '+lab:''}">${esc(c)}${lab||cog?`<small>${esc(lab)}${cog>1?' ×'+cog:''}</small>`:''}</button>`; }).join('')}</div>`
+    : `<div class="card empty">Nessun civico: imposta l’intervallo (es. 1–60) con “Modifica”, oppure aggiungili a mano.</div>`;
+  const cont = contattiDiVia(id);
+  const geo = v.geom && v.geom[0];
+  return `<button class="back" data-act="back">‹ Indietro</button>
+  <div class="top"><div style="min-width:0"><h1>${esc(v.nome)}</h1><div class="date">${esc([v.zona, TIPI[v.tipo], v.dal&&v.al?`civici ${v.dal}–${v.al}${v.lato!=='tutti'?' '+v.lato:''}`:''].filter(Boolean).join(' · '))}</div></div><button class="btn btn-sm" data-act="edit-via" data-id="${id}">Modifica</button></div>
+  <div class="card status">
+    <div class="status-l">${pill(st.l, st.c)}<span class="meta">${g?`Giro ${v.giri.length} · lettera ${fmt(g.data)} · ${num(g.lettere)} lettere`:'Lettera non ancora messa'}</span></div>
+    ${passaggi}${hint}${azioni}
+    ${geo?`<a class="btn btn-sm" href="${mapsLink(geo)}" target="_blank" rel="noopener">Portami qui con Maps</a>`:''}
+  </div>
+  <div class="sec"><div class="sec-h"><h2>Civici</h2><span class="small">${civ.length-aperti.length}/${civ.length} gestiti</span></div>
+    <div class="legend">${pill('bianco = non c’era','grey')}${pill('no / stop','red')}${pill('interessato','green')}${pill('contatto','accent')}${pill('biglietto','amber')}</div>
+    <div class="btns"><button class="btn btn-sm" data-act="solo-aperti">${V.soloAperti?'Mostra tutti':'Solo da trovare ('+aperti.length+')'}</button><button class="btn btn-sm" data-act="add-civico" data-id="${id}">+ Civico / interno</button></div>
+    ${grid}
+  </div>
+  <div class="sec"><div class="sec-h"><h2>Contatti da questa via</h2><button class="btn btn-sm" data-act="new-cont" data-via="${id}">+ Contatto</button></div>
+    ${cont.length?`<div class="list">${cont.map(([cid,k])=>rowCont(cid,k)).join('')}</div>`:'<div class="card empty">Nessuno ancora.</div>'}</div>
+  ${v.note?`<div class="sec"><h2>Note</h2><div class="card pad" style="white-space:pre-wrap">${esc(v.note)}</div></div>`:''}`;
+}
+
+function viewContatti(){
+  const F = [['tutti','Tutti'],['nuovo','Nuovi'],['appuntamento','Appuntamenti'],['cliente','Clienti'],['attesa','Da ricontattare'],['perso','Persi']];
+  const q = V.qc.trim().toLowerCase();
+  let items = Object.entries(S.contatti);
+  if(V.filtroCont!=='tutti') items = items.filter(([,k]) => V.filtroCont==='cliente' ? (k.luce||k.gas) : V.filtroCont==='attesa' ? (k.offerte||[]).length : k.stato===V.filtroCont);
+  if(q) items = items.filter(([,k]) => [k.nome,k.telefono,k.indirizzo,k.viaId&&S.vie[k.viaId]?S.vie[k.viaId].nome:''].join(' ').toLowerCase().includes(q));
+  items.sort((a,b)=>String(b[1].data||'').localeCompare(String(a[1].data||'')));
+  return `<div class="top"><h1>Contatti</h1><button class="btn btn-p btn-sm" data-act="new-cont">+ Contatto</button></div>
+  <input class="search" id="q-cont" type="search" placeholder="Cerca nome, telefono o via" value="${esc(V.qc)}" aria-label="Cerca contatti">
+  <div class="chips" style="margin-top:10px">${F.map(([k,l])=>`<button class="chip" data-act="fcont" data-k="${k}" aria-pressed="${V.filtroCont===k}">${l}</button>`).join('')}</div>
+  <div class="sec">${items.length?`<div class="list">${items.map(([id,k])=>rowCont(id,k)).join('')}</div>`:`<div class="card empty">${Object.keys(S.contatti).length?'Nessun contatto con questo filtro.':'Qui salvi chi ti scrive, ti chiama o risponde al citofono interessato.'}</div>`}</div>
+  <p class="small" style="margin-top:14px">Salva solo i dati di chi ti ha contattato o ti ha chiesto di essere richiamato.</p>`;
+}
+
+function viewStats(){
+  const c = calcola(); const imp = S.imp;
+  const tbl = (m, label) => { const ks = Object.keys(m).sort((a,b)=>m[b].lettere-m[a].lettere);
+    if(!ks.length) return '<div class="card empty">Nessun dato.</div>';
+    return `<div class="card tbl-wrap"><table><thead><tr><th>${label}</th><th>Lettere</th><th>Contatti</th><th>Risposta</th><th>Clienti</th></tr></thead><tbody>${ks.map(k=>`<tr><td>${esc(TIPI[k]||k)}</td><td>${num(m[k].lettere)}</td><td>${num(m[k].contatti)}</td><td>${pct(m[k].contatti,m[k].lettere)}</td><td>${num(m[k].clienti)}</td></tr>`).join('')}</tbody></table></div>`; };
+  const can = Object.keys(c.canali);
+  return `<div class="top"><h1>Numeri</h1></div>
+  <div class="kpis">
+    <div class="kpi"><b>${num(c.lettere)}</b><span>lettere</span></div>
+    <div class="kpi"><b>${num(c.vieFatte)}/${num(c.nVie)}</b><span>vie completate</span></div>
+    <div class="kpi"><b>${num(c.vieRipassate)}</b><span>vie ripassate</span></div>
+    <div class="kpi"><b>${num(c.contatti)}</b><span>contatti</span></div>
+    <div class="kpi"><b>${num(c.clienti)}</b><span>clienti</span></div>
+    <div class="kpi"><b>${num(c.nLuce+c.nGas)}</b><span>contratti (${c.nLuce} luce, ${c.nGas} gas)</span></div>
+  </div>
+  <div class="sec"><h2>I numeri che contano</h2><div class="card" style="padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div><div class="big">${pct(c.daLettera,c.lettere)}</div><div class="small">tasso di risposta (contatti da lettera e ripasso ÷ lettere)</div></div>
+    <div><div class="big">${pct(c.clienti,c.contatti)}</div><div class="small">da contatto a cliente</div></div>
+    <div><div class="big">${num(c.lordo)} €</div><div class="small">lordo stimato (${num(imp.gettoneLuce)} € luce, ${num(imp.gettoneGas)} € gas)</div></div>
+    <div><div class="big">${pct(c.civPassati,c.civTot)}</div><div class="small">civici gestiti nelle vie ripassate</div></div>
+  </div></div>
+  <div class="sec"><h2>Per tipo di zona</h2>${tbl(c.perTipo,'Tipo')}</div>
+  <div class="sec"><h2>Per zona</h2>${tbl(c.perZona,'Zona')}</div>
+  <div class="sec"><h2>Esiti al citofono</h2><div class="card pad" style="display:flex;flex-wrap:wrap;gap:8px">${Object.keys(ESITI).map(k=>pill(`${ESITI[k].l}: ${num(c.esiti[k]||0)}`, ESITI[k].c)).join('')}</div></div>
+  <div class="sec"><h2>Per canale</h2>${can.length?`<div class="card tbl-wrap"><table><thead><tr><th>Canale</th><th>Contatti</th><th>Clienti</th><th>Conv.</th></tr></thead><tbody>${can.map(k=>`<tr><td>${esc(CANALI[k]||k)}</td><td>${num(c.canali[k].contatti)}</td><td>${num(c.canali[k].clienti)}</td><td>${pct(c.canali[k].clienti,c.canali[k].contatti)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="card empty">Nessun contatto ancora.</div>'}</div>
+  <div class="sec"><div class="sec-h"><h2>Prezzi e compensi</h2><button class="btn btn-sm" data-act="edit-imp">Modifica</button></div>
+    <div class="card pad" style="display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;font-size:14px">
+      <div>Nostro luce<br><b>${prezzo(imp.nostroLuce)} €/kWh</b></div><div>PUN del mese<br><b>${prezzo(imp.pun)} €/kWh</b></div>
+      <div>Nostro gas<br><b>${imp.nostroGas==null?'da impostare':prezzo(imp.nostroGas)+' €/Smc'}</b></div><div>PSV del mese<br><b>${imp.psv==null?'da impostare':prezzo(imp.psv)+' €/Smc'}</b></div>
+      <div class="small" style="grid-column:1/-1">${imp.aggiornato?'Aggiornati il '+fmt(imp.aggiornato)+'. ':''}Aggiorna PUN e PSV ogni mese: servono per gli avvisi sulle offerte variabili.</div>
+    </div></div>
+  <div class="sec"><h2>Backup</h2><div class="card pad" style="display:flex;flex-direction:column;gap:10px">
+    <div class="small">I dati sono solo su questo telefono. Scarica un backup ogni settimana e salvalo (Drive, email a te stesso). Con “Ripristina” lo ricarichi qui o su un altro telefono. ${S.meta.ultimoBackup?'Ultimo backup: '+fmt(S.meta.ultimoBackup)+'.':''}</div>
+    <div class="btns"><button class="btn" data-act="export">Scarica backup</button><button class="btn" data-act="import">Ripristina</button></div></div></div>`;
+}
+
+/* ================= fogli ================= */
+let sheetCtx = null;
+function openSheet(html, ctx){ sheetCtx = ctx||{}; $('#sheet-root').innerHTML = `<div class="scrim" data-act="scrim"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`; const f = $('#sheet-root [autofocus]'); if(f) f.focus({preventScroll:true}); }
+function closeSheet(){ $('#sheet-root').innerHTML=''; sheetCtx = null; }
+const head = t => `<div class="sheet-h"><h3>${esc(t)}</h3><button class="x" data-act="close" aria-label="Chiudi">×</button></div>`;
+const val = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
+const seg = (name, opts, cur) => `<div class="seg" data-seg="${name}">${Object.entries(opts).map(([k,l])=>`<button type="button" data-act="seg" data-name="${name}" data-k="${k}" aria-pressed="${cur===k}">${esc(l)}</button>`).join('')}</div>`;
+const segVal = name => { const b = document.querySelector(`[data-seg="${name}"] [aria-pressed="true"]`); return b ? b.dataset.k : null; };
+
+function sheetVia(id){
+  const v = id ? S.vie[id] : {tipo:'villette', lato:'tutti'};
+  const zone = [...new Set(Object.values(S.vie).map(x=>(x.zona||'').trim()).filter(Boolean))];
+  openSheet(`${head(id?'Modifica via':'Nuova via')}
+  <div class="f"><label for="v-nome">Via</label><input id="v-nome" value="${esc(v.nome)}" placeholder="Via Roma" autocomplete="off" ${id?'':'autofocus'}></div>
+  <div class="f"><label for="v-zona">Zona</label><input id="v-zona" list="zone-list" value="${esc(v.zona)}" autocomplete="off"><datalist id="zone-list">${zone.map(z=>`<option value="${esc(z)}"></option>`).join('')}</datalist></div>
+  <div class="f"><span class="lbl">Tipo</span>${seg('tipo', TIPI, v.tipo||'villette')}</div>
+  <div class="f3"><div class="f"><label for="v-dal">Dal civico</label><input id="v-dal" inputmode="numeric" value="${esc(v.dal)}"></div><div class="f"><label for="v-al">Al civico</label><input id="v-al" inputmode="numeric" value="${esc(v.al)}"></div><div class="f"><label for="v-lato">Lato</label><select id="v-lato">${['tutti','pari','dispari'].map(l=>`<option ${v.lato===l?'selected':''}>${l}</option>`).join('')}</select></div></div>
+  ${(v.extra||[]).length?`<div class="small">Civici trovati sulla mappa o aggiunti a mano: ${esc(v.extra.join(', '))}</div>`:''}
+  ${id?'':`<div class="f2"><div class="f"><label for="v-lett">Lettere messe</label><input id="v-lett" inputmode="numeric" placeholder="vuoto se non ancora"></div><div class="f"><label for="v-data">Data lettera</label><input id="v-data" type="date" value="${oggi()}"></div></div>`}
+  <div class="f"><label for="v-note">Note</label><textarea id="v-note">${esc(v.note)}</textarea></div>
+  <button class="btn btn-p btn-big" data-act="save-via" data-id="${id||''}">Salva</button>
+  ${id?`<div class="danger-zone" id="dz"><button class="btn btn-sm btn-danger" data-act="ask-del" data-what="via" data-id="${id}">Elimina via</button></div>`:''}`);
+}
+function saveVia(id){
+  const nome = val('v-nome'); if(!nome){ toast('Scrivi il nome della via.'); return; }
+  const v = id ? clone(S.vie[id]) : {giri:[], segnati:[], extra:[], creata:oggi()};
+  Object.assign(v, {nome, zona:val('v-zona'), tipo:segVal('tipo')||'villette', dal:val('v-dal'), al:val('v-al'), lato:val('v-lato')||'tutti', note:val('v-note')});
+  const newId = id || nid('v');
+  if(!id){ const n = parseInt(val('v-lett')); if(n>0) v.giri = [{data: val('v-data')||oggi(), lettere:n, passaggi:[]}]; }
+  putVia(newId, v); closeSheet(); if(!id) openVia(newId); toast('Via salvata');
+}
+function sheetLettera(id, guide){
+  const v = S.vie[id]; const n = civiciVia(v).length;
+  openSheet(`${head('Lettera messa · '+v.nome)}
+  <div class="f2"><div class="f"><label for="l-n">Quante lettere</label><input id="l-n" inputmode="numeric" value="${n||''}" autofocus></div><div class="f"><label for="l-d">Data</label><input id="l-d" type="date" value="${oggi()}"></div></div>
+  ${n?'':`<div class="f3"><div class="f"><label for="l-dal">Dal civico</label><input id="l-dal" inputmode="numeric"></div><div class="f"><label for="l-al">Al civico</label><input id="l-al" inputmode="numeric"></div><div class="f"><label for="l-lato">Lato</label><select id="l-lato"><option>tutti</option><option>pari</option><option>dispari</option></select></div></div><div class="small">La mappa non ha i civici di questa via: scrivi il primo e l’ultimo che vedi, così al ripasso hai la griglia.</div>`}
+  <div class="small">Nei condomini metti il numero di cassette, non di civici.</div>
+  <button class="btn btn-p btn-big" data-act="save-lettera" data-id="${id}" data-guide="${guide?1:''}">Salva${guide?' e vai alla prossima':''}</button>`);
+}
+function saveLettera(id, guide){
+  const n = parseInt(val('l-n')); if(!(n>0)){ toast('Scrivi quante lettere hai messo.'); return; }
+  const v = clone(S.vie[id]); v.giri = v.giri||[]; v.giri.push({data:val('l-d')||oggi(), lettere:n, passaggi:[]});
+  if(document.getElementById('l-dal') && val('l-dal') && val('l-al')){ v.dal = val('l-dal'); v.al = val('l-al'); v.lato = val('l-lato')||'tutti'; }
+  S.vie[id] = v;
+  if(guide && V.pianoId && S.piani[V.pianoId]){ const p = S.piani[V.pianoId]; if(p.pos < p.ordine.length-1) p.pos++; }
+  save(); closeSheet(); render(); if(guide) focusStep(); toast(`${n} lettere segnate`);
+}
+function sheetCivico(id, c){
+  const v = S.vie[id]; const entries = (v.segnati||[]).filter(s=>s.civico===c);
+  const cont = Object.entries(S.contatti).filter(([,k]) => k.viaId===id && String(k.civico||'').trim()===c);
+  openSheet(`${head(v.nome+' '+c)}
+  ${cont.length?`<div class="list">${cont.map(([cid,k])=>rowCont(cid,k)).join('')}</div>`:''}
+  ${entries.length?`<div class="f"><span class="lbl">Già segnati</span><div class="list">${entries.map(e=>`<div class="row" style="cursor:default"><div class="row-main"><div class="row-t">${esc(ESITI[e.esito]?.l||e.esito)}${e.cognome?' · '+esc(e.cognome):''}</div><div class="row-s">${esc([fmt(e.data), e.nota].filter(Boolean).join(' · '))}</div></div><button class="btn btn-sm" data-act="del-segno" data-id="${id}" data-sid="${e.id}">Togli</button></div>`).join('')}</div></div>`:''}
+  <div class="f"><span class="lbl">Com’è andata</span><div class="esiti">${['no','interessato','appuntamento','non_ripassare','affitto_prop','non_esiste'].map(k=>`<button type="button" class="c-${ESITI[k].c}" data-act="pick-esito" data-k="${k}" aria-pressed="false">${ESITI[k].l}</button>`).join('')}</div></div>
+  <div class="f"><label for="s-cog">Cognome sul citofono o interno</label><input id="s-cog" placeholder="per i condomini" autocomplete="off"></div>
+  <div class="f"><label for="s-nota">Nota</label><input id="s-nota" placeholder="es. ripassare dopo le 18" autocomplete="off"></div>
+  <button class="btn btn-p btn-big" data-act="save-segno" data-id="${id}" data-c="${esc(c)}">Salva</button>
+  <button class="btn" data-act="new-cont" data-via="${id}" data-c="${esc(c)}">+ Contatto da questo civico</button>`, {esito:null});
+}
+function saveSegno(id, c){
+  const esito = sheetCtx && sheetCtx.esito; if(!esito){ toast('Scegli com’è andata.'); return; }
+  const v = clone(S.vie[id]); v.segnati = v.segnati||[]; const cog = val('s-cog');
+  v.segnati.push({id:nid('s'), civico:c, esito, cognome:cog, nota:val('s-nota'), data:oggi()});
+  putVia(id, v); closeSheet();
+  if(esito==='interessato'||esito==='appuntamento'){ sheetCont(null, {viaId:id, civico:c, canale:'ripasso', stato:esito==='appuntamento'?'appuntamento':'nuovo', nome:cog}); toast('Segnato: ora salva il contatto'); }
+  else toast('Segnato');
+}
+function sheetCont(id, pre){
+  const k = id ? S.contatti[id] : Object.assign({canale:'lettera', stato:'nuovo', data:oggi(), offerte:[]}, pre||{});
+  const vie = Object.entries(S.vie).sort((a,b)=>a[1].nome.localeCompare(b[1].nome,'it'));
+  const tel = (k.telefono||'').replace(/[^\d+]/g,''); const wa = tel ? (tel.startsWith('+')?tel.slice(1):(tel.startsWith('39')&&tel.length>10?tel:'39'+tel)) : '';
+  const off = (k.offerte||[]);
+  let cal = '';
+  if(id && k.dataApp){ const via = k.viaId && S.vie[k.viaId]; const t = (k.oraApp||'18:00').replace(':','');
+    const d0 = k.dataApp.replace(/-/g,''); const end = String(Number(t.slice(0,2))+1).padStart(2,'0')+t.slice(2);
+    const luogo = via ? `${via.base||via.nome} ${k.civico||''}` : (k.indirizzo||'');
+    cal = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent('Appuntamento '+(k.nome||''))}&dates=${d0}T${t}00/${d0}T${end}00&ctz=Europe/Rome&location=${encodeURIComponent(luogo)}&details=${encodeURIComponent([k.telefono, k.note].filter(Boolean).join('\n'))}`; }
+  openSheet(`${head(id?(k.nome||'Contatto'):'Nuovo contatto')}
+  ${id&&tel?`<div class="btns"><a class="btn" href="tel:${esc(tel)}">Chiama</a><a class="btn" href="https://wa.me/${esc(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>`:''}
+  <div class="f2"><div class="f"><label for="c-nome">Nome</label><input id="c-nome" value="${esc(k.nome)}" autocomplete="off" ${id?'':'autofocus'}></div><div class="f"><label for="c-tel">Telefono</label><input id="c-tel" type="tel" inputmode="tel" value="${esc(k.telefono)}" autocomplete="off"></div></div>
+  <div class="f"><label for="c-canale">Come ti ha trovato</label><select id="c-canale">${Object.entries(CANALI).map(([c,l])=>`<option value="${c}" ${k.canale===c?'selected':''}>${l}</option>`).join('')}</select></div>
+  <div class="f2"><div class="f"><label for="c-via">Via</label><select id="c-via"><option value="">— altrove —</option>${vie.map(([vid,v])=>`<option value="${vid}" ${k.viaId===vid?'selected':''}>${esc(v.nome)}</option>`).join('')}</select></div><div class="f"><label for="c-civ">Civico</label><input id="c-civ" value="${esc(k.civico)}" autocomplete="off"></div></div>
+  <div class="f"><label for="c-ind">Indirizzo (se fuori dalle tue vie)</label><input id="c-ind" value="${esc(k.indirizzo)}" autocomplete="off"></div>
+  <div class="f"><label for="c-stato">Stato</label><select id="c-stato">${Object.entries(STATI_C).map(([s,o])=>`<option value="${s}" ${k.stato===s?'selected':''}>${o.l}</option>`).join('')}</select></div>
+  <div class="f2"><div class="f"><label for="c-app">Data appuntamento</label><input id="c-app" type="date" value="${esc(k.dataApp)}"></div><div class="f"><label for="c-ora">Ora</label><input id="c-ora" type="time" value="${esc(k.oraApp)}"></div></div>
+  ${cal?`<a class="btn" href="${cal}" target="_blank" rel="noopener">Aggiungi a Google Calendar</a>`:''}
+  <div class="box"><span class="lbl">Contratti firmati</span><label class="check"><input type="checkbox" id="c-luce" ${k.luce?'checked':''}> Luce</label><label class="check"><input type="checkbox" id="c-gas" ${k.gas?'checked':''}> Gas</label></div>
+  <div class="box"><span class="lbl">Offerte attuali da ricontrollare</span>
+    <div class="small">Se oggi la sua offerta conviene più della nostra (o hai fatto la luce ma non il gas), salvala qui: ti avviso quando scade o quando la nostra diventa più conveniente.</div>
+    ${off.map((o,i)=>{ const r = valutaOfferta(o); return `<div class="card" style="padding:10px 12px;display:flex;flex-direction:column;gap:6px"><div class="status-l"><b>${o.fornitura==='gas'?'Gas':'Luce'} · ${esc(o.fornitore||'fornitore?')} · ${o.tipo==='variabile'?'variabile, spread '+prezzo(o.spread):'fisso '+prezzo(o.prezzo)}</b>${r.on?pill('Ricontatta','orange'):''}</div><div class="small">${esc(r.msg)}${o.nota?' · '+esc(o.nota):''}</div><div class="btns">${r.on?`<button class="btn btn-sm" data-act="off-rivisto" data-id="${id}" data-i="${i}">Fatto: ricontattato</button>`:''}<button class="btn btn-sm" data-act="off-edit" data-id="${id}" data-i="${i}">Modifica</button><button class="btn btn-sm btn-danger" data-act="off-del" data-id="${id}" data-i="${i}">Togli</button></div></div>`; }).join('')}
+    ${id?`<button class="btn" data-act="off-edit" data-id="${id}" data-i="-1">+ Aggiungi offerta</button>`:'<div class="small">Salva prima il contatto, poi aggiungi le offerte.</div>'}
+  </div>
+  <div class="f"><label for="c-note">Note</label><textarea id="c-note">${esc(k.note)}</textarea></div>
+  <button class="btn btn-p btn-big" data-act="save-cont" data-id="${id||''}">Salva</button>
+  ${id?`<div class="danger-zone" id="dz"><button class="btn btn-sm btn-danger" data-act="ask-del" data-what="cont" data-id="${id}">Elimina contatto</button></div>`:''}`);
+}
+function saveCont(id){
+  const nome = val('c-nome'), telefono = val('c-tel');
+  if(!nome && !telefono){ toast('Scrivi almeno nome o telefono.'); return; }
+  const k = id ? clone(S.contatti[id]) : {data:oggi(), offerte:[]};
+  Object.assign(k, {nome, telefono, canale:val('c-canale'), viaId:val('c-via')||null, civico:val('c-civ'), indirizzo:val('c-ind'), stato:val('c-stato'), dataApp:val('c-app')||null, oraApp:val('c-ora')||null, luce:$('#c-luce').checked, gas:$('#c-gas').checked, note:val('c-note')});
+  if((k.luce||k.gas) && (k.stato==='nuovo'||k.stato==='appuntamento')) k.stato='cliente';
+  const cid = id || nid('c');
+  putCont(cid, k); closeSheet(); toast('Contatto salvato');
+  if(!id && k.stato==='attesa') sheetOfferta(cid, -1);
+  else if(!id && k.dataApp) sheetCont(cid);
+}
+function sheetOfferta(id, i){
+  const k = S.contatti[id]; const o = i>=0 ? k.offerte[i] : {fornitura: k.luce && !k.gas ? 'gas' : 'luce', tipo:'fisso'};
+  openSheet(`${head(i>=0?'Modifica offerta':'Offerta attuale del cliente')}
+  <div class="f"><span class="lbl">Fornitura</span>${seg('forn',{luce:'Luce',gas:'Gas'},o.fornitura)}</div>
+  <div class="f"><label for="o-forn">Fornitore attuale</label><input id="o-forn" value="${esc(o.fornitore)}" autocomplete="off"></div>
+  <div class="f"><span class="lbl">Tipo di prezzo</span>${seg('tipoP',{fisso:'Fisso',variabile:'Variabile (PUN/PSV + spread)'},o.tipo)}</div>
+  <div class="f2"><div class="f"><label for="o-prezzo">Prezzo fisso</label><input id="o-prezzo" inputmode="decimal" value="${o.prezzo??''}" placeholder="es. 0,095"></div><div class="f"><label for="o-spread">Spread se variabile</label><input id="o-spread" inputmode="decimal" value="${o.spread??''}" placeholder="es. 0,012"></div></div>
+  <div class="f"><label for="o-scad">Scadenza dell’offerta</label><input id="o-scad" type="date" value="${esc(o.scadenza)}"></div>
+  <div class="f"><label for="o-nota">Nota</label><input id="o-nota" value="${esc(o.nota)}" placeholder="es. consumo 3.200 kWh" autocomplete="off"></div>
+  <button class="btn btn-p btn-big" data-act="save-off" data-id="${id}" data-i="${i}">Salva offerta</button>`);
+}
+function saveOfferta(id, i){
+  const k = clone(S.contatti[id]); k.offerte = k.offerte||[];
+  const o = {fornitura:segVal('forn')||'luce', fornitore:val('o-forn'), tipo:segVal('tipoP')||'fisso', prezzo:numVal(val('o-prezzo')), spread:numVal(val('o-spread')), scadenza:val('o-scad')||null, nota:val('o-nota'), rivisto: i>=0 ? (k.offerte[i].rivisto||null) : null};
+  if(i>=0) k.offerte[i] = o; else k.offerte.push(o);
+  if(!k.luce && !k.gas && k.stato!=='perso') k.stato = 'attesa';
+  putCont(id, k); closeSheet(); sheetCont(id); toast('Offerta salvata: ti avviso io');
+}
+function sheetImp(){
+  const i = S.imp;
+  openSheet(`${head('Prezzi e compensi')}
+  <div class="f2"><div class="f"><label for="i-nl">Nostro luce €/kWh</label><input id="i-nl" inputmode="decimal" value="${i.nostroLuce??''}"></div><div class="f"><label for="i-pun">PUN del mese €/kWh</label><input id="i-pun" inputmode="decimal" value="${i.pun??''}"></div></div>
+  <div class="f2"><div class="f"><label for="i-ng">Nostro gas €/Smc</label><input id="i-ng" inputmode="decimal" value="${i.nostroGas??''}"></div><div class="f"><label for="i-psv">PSV del mese €/Smc</label><input id="i-psv" inputmode="decimal" value="${i.psv??''}"></div></div>
+  <div class="f2"><div class="f"><label for="i-gl">Compenso luce €</label><input id="i-gl" inputmode="decimal" value="${i.gettoneLuce??''}"></div><div class="f"><label for="i-gg">Compenso gas €</label><input id="i-gg" inputmode="decimal" value="${i.gettoneGas??''}"></div></div>
+  <button class="btn btn-p btn-big" data-act="save-imp">Salva</button>`);
+}
+
+/* ================= zona → giro ================= */
+async function cercaVie(){
+  const area = V.draw.slice(); V.mode='loading'; V.loadingMsg='Cerco le vie su OpenStreetMap…'; render();
+  try{
+    const osm = await fetchOSM(area);
+    const segs = buildSegments(osm, area);
+    if(!segs.length){ V.mode='draw'; render(); toast('Nessuna via con nome trovata in questa zona.'); return; }
+    const zoneN = Object.keys(S.piani).length + 1;
+    V.found = {area, segs, start: area[0], nome: 'Zona '+zoneN+' · '+fmt(oggi()), tipo:'misto'};
+    V.mode='review'; ricalcolaPreview(); render(); fitMap();
+  }catch(e){ V.mode='draw'; render(); toast('Non riesco a scaricare le vie: controlla la connessione e riprova tra poco.'); }
+}
+function ricalcolaPreview(){
+  const F = V.found; const idx = F.segs.map((s,i)=>i).filter(i=>F.segs[i].sel);
+  const sub = idx.map(i=>F.segs[i]); const r = planRoute(sub, F.start);
+  V.preview = {order: r.tour.map(([j,d])=>[idx[j],d]), walk:r.walk, trans:r.trans, tot:r.tot};
+  drawMap();
+}
+function findExistingVia(s){
+  const nb = normName(s.base);
+  for(const [id,v] of Object.entries(S.vie)){
+    if(normName(v.base||v.nome)!==nb) continue;
+    if(!v.geom) continue;
+    const probe = s.coords[Math.floor(s.coords.length/2)];
+    if(distPtLine(probe, v.geom) < 60) return id;
+  }
+  return null;
+}
+function salvaGiro(){
+  const F = V.found; const pv = V.preview; if(!pv || !pv.order.length) return;
+  const nome = val('z-nome') || F.nome; const tipo = segVal('ztipo') || 'misto';
+  const ordine = [];
+  pv.order.forEach(([i,d]) => { const s = F.segs[i]; let id = findExistingVia(s);
+    if(id){ const v = S.vie[id]; (s.civici||[]).forEach(c => { if(!(v.extra||[]).includes(c)) (v.extra = v.extra||[]).push(c); }); if(!v.zona) v.zona = nome; }
+    else { id = nid('v'); S.vie[id] = {nome:s.nome, base:s.base, zona:nome, tipo, dal:'', al:'', lato:'tutti', extra:s.civici.slice(), giri:[], segnati:[], note:'', geom:s.coords, creata:oggi(), osm:true}; }
+    ordine.push({viaId:id, dir:d}); });
+  const pid = nid('p');
+  S.piani[pid] = {nome, creato:oggi(), area:F.area, ordine, pos:0, dist:Math.round(pv.tot)};
+  save(); V.found=null; V.preview=null; V.draw=[]; V.mode='idle'; V.pianoId=pid; render(); focusStep();
+  toast('Giro salvato: parti dalla via 1');
+}
+function replan(pid){
+  const p = S.piani[pid]; const done = p.ordine.slice(0, p.pos); const rest = p.ordine.slice(p.pos).filter(o=>S.vie[o.viaId] && S.vie[o.viaId].geom);
+  const segs = rest.map(o => ({coords:S.vie[o.viaId].geom, len:lineLen(S.vie[o.viaId].geom)}));
+  let start = mePos;
+  if(!start && done.length){ const last = done[done.length-1]; const v = S.vie[last.viaId]; if(v && v.geom) start = last.dir ? v.geom[0] : v.geom[v.geom.length-1]; }
+  const r = planRoute(segs, start);
+  p.ordine = done.concat(r.tour.map(([j,d]) => ({viaId:rest[j].viaId, dir:d})));
+  putPiano(pid, p); focusStep(); toast(mePos ? 'Ricalcolato da dove sei' : 'Ricalcolato dalla via attuale');
+}
+
+/* ================= backup ================= */
+function exportData(){
+  const data = JSON.stringify({app:'giro-lettere', versione:1, esportato:new Date().toISOString(), vie:S.vie, contatti:S.contatti, impostazioni:S.imp, piani:S.piani}, null, 1);
+  const blob = new Blob([data], {type:'application/json'}); const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `giro-lettere-${oggi()}.json`; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  S.meta.ultimoBackup = oggi(); save(); render(); toast('Backup scaricato: salvalo su Drive o mandalo a te stesso');
+}
+function importData(file){
+  const r = new FileReader();
+  r.onload = () => { try{ const o = JSON.parse(r.result);
+      if(!o || (!o.vie && !o.contatti)) throw new Error('formato');
+      Object.assign(S.vie, o.vie||{}); Object.assign(S.contatti, o.contatti||{}); Object.assign(S.piani, o.piani||{});
+      if(o.impostazioni||o.imp) S.imp = {...DEF_IMP, ...(o.impostazioni||o.imp)};
+      save(); render(); toast(`Ripristinati ${Object.keys(o.vie||{}).length} vie e ${Object.keys(o.contatti||{}).length} contatti`);
+    }catch(e){ toast('Questo file non è un backup di Giro Lettere.'); } };
+  r.readAsText(file);
+}
+
+/* ================= azioni ================= */
+let toastT = null;
+function toast(m){ $('#toast-root').innerHTML = `<div class="toast" role="status">${esc(m)}</div>`; clearTimeout(toastT); toastT = setTimeout(()=>{ $('#toast-root').innerHTML=''; }, 2800); }
+function go(tab){ V.tab = tab; V.viaId = null; location.hash = tab; render(); window.scrollTo(0,0); if(tab==='mappa') setTimeout(()=>{ if(V.pianoId) focusStep(); else fitMap(); }, 60); }
+function openVia(id){ V.viaId = id; V.soloAperti = false; location.hash = 'via-'+id; render(); window.scrollTo(0,0); }
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if(!t) return;
+  const a = t.dataset.act, id = t.dataset.id;
+  if(a==='scrim'){ if(e.target===t) closeSheet(); return; }
+  if(a==='seg-sel') return;
+  switch(a){
+    case 'tab': go(t.dataset.k); break;
+    case 'close': closeSheet(); break;
+    case 'open-via': openVia(id); break;
+    case 'back': V.viaId = null; location.hash = V.tab; render(); if(V.tab==='mappa' && V.pianoId) setTimeout(focusStep,60); break;
+    case 'new-via': sheetVia(null); break;
+    case 'edit-via': sheetVia(id); break;
+    case 'save-via': saveVia(id||null); break;
+    case 'lettera': sheetLettera(id, !!t.dataset.guide); break;
+    case 'save-lettera': saveLettera(id, !!t.dataset.guide); break;
+    case 'passaggio': { const v = clone(S.vie[id]); const g = v.giri[v.giri.length-1]; g.passaggi = g.passaggi||[]; g.passaggi.push({data:oggi(), fascia:fasciaOra()}); putVia(id, v); V.soloAperti = true; openVia(id); toast(`Passaggio ${g.passaggi.length} registrato: tocca chi risponde`); break; }
+    case 'biglietti': { const v = clone(S.vie[id]); const ap = civiciAperti(S.vie[id], id); v.segnati = v.segnati||[]; ap.forEach(c => v.segnati.push({id:nid('s'), civico:c, esito:'biglietto', data:oggi()})); putVia(id, v); toast(`Biglietto segnato su ${ap.length} civici`); break; }
+    case 'solo-aperti': V.soloAperti = !V.soloAperti; render(); break;
+    case 'civico': sheetCivico(id, t.dataset.c); break;
+    case 'pick-esito': document.querySelectorAll('[data-act="pick-esito"]').forEach(b => b.setAttribute('aria-pressed', b===t)); sheetCtx = sheetCtx||{}; sheetCtx.esito = t.dataset.k; break;
+    case 'save-segno': saveSegno(id, t.dataset.c); break;
+    case 'del-segno': { const v = clone(S.vie[id]); const s = v.segnati.find(x=>x.id===t.dataset.sid); v.segnati = v.segnati.filter(x=>x.id!==t.dataset.sid); putVia(id, v); if(s) sheetCivico(id, s.civico); break; }
+    case 'add-civico': openSheet(`${head('Aggiungi civico')}<div class="f"><label for="ac-c">Civico</label><input id="ac-c" placeholder="es. 14/A oppure 22 int. 5" autofocus autocomplete="off"></div><button class="btn btn-p btn-big" data-act="save-civico" data-id="${id}">Aggiungi</button>`); break;
+    case 'save-civico': { const c = val('ac-c'); if(!c){ toast('Scrivi il civico.'); return; } const v = clone(S.vie[id]); v.extra = v.extra||[]; if(!civiciVia(v).includes(c)) v.extra.push(c); putVia(id, v); closeSheet(); toast('Civico aggiunto'); break; }
+    case 'new-cont': sheetCont(null, t.dataset.via ? {viaId:t.dataset.via, civico:t.dataset.c||'', canale:'lettera'} : null); break;
+    case 'open-cont': sheetCont(id); break;
+    case 'save-cont': saveCont(id||null); break;
+    case 'off-edit': sheetOfferta(id, parseInt(t.dataset.i)); break;
+    case 'save-off': saveOfferta(id, parseInt(t.dataset.i)); break;
+    case 'off-del': { const k = clone(S.contatti[id]); k.offerte.splice(parseInt(t.dataset.i),1); if(!k.offerte.length && k.stato==='attesa') k.stato='nuovo'; putCont(id, k); sheetCont(id); break; }
+    case 'off-rivisto': { const k = clone(S.contatti[id]); k.offerte[parseInt(t.dataset.i)].rivisto = oggi(); putCont(id, k); sheetCont(id); toast('Ti riavviso tra 30 giorni se serve'); break; }
+    case 'seg': document.querySelectorAll(`[data-act="seg"][data-name="${t.dataset.name}"]`).forEach(b => b.setAttribute('aria-pressed', b===t)); if(t.dataset.name==='ztipo' && V.found) V.found.tipo = t.dataset.k; break;
+    case 'fvie': V.filtroVie = t.dataset.k; render(); break;
+    case 'fcont': V.filtroCont = t.dataset.k; render(); break;
+    case 'edit-imp': sheetImp(); break;
+    case 'save-imp': putImp({nostroLuce:numVal(val('i-nl')), pun:numVal(val('i-pun')), nostroGas:numVal(val('i-ng')), psv:numVal(val('i-psv')), gettoneLuce:numVal(val('i-gl'))||0, gettoneGas:numVal(val('i-gg'))||0, aggiornato:oggi()}); closeSheet(); toast('Prezzi aggiornati'); break;
+    case 'ask-del': $('#dz').innerHTML = `<span class="small">Sicuro? Non si può annullare.</span><button class="btn btn-sm btn-danger" data-act="do-del" data-what="${t.dataset.what}" data-id="${id}">Sì, elimina</button><button class="btn btn-sm" data-act="no-del">No</button>`; break;
+    case 'no-del': closeSheet(); render(); break;
+    case 'do-del': {
+      const w = t.dataset.what;
+      if(w==='via'){ delete S.vie[id]; Object.values(S.piani).forEach(p => { p.ordine = p.ordine.filter(o=>o.viaId!==id); p.pos = Math.min(p.pos, Math.max(0,p.ordine.length-1)); }); V.viaId=null; location.hash = V.tab; }
+      else if(w==='cont') delete S.contatti[id];
+      else if(w==='piano'){ delete S.piani[id]; V.pianoId=null; }
+      save(); closeSheet(); render(); toast('Eliminato'); break; }
+    case 'export': exportData(); break;
+    case 'import': $('#import-file').click(); break;
+    case 'new-zone': V.tab='mappa'; V.viaId=null; V.pianoId=null; V.mode='draw'; V.draw=[]; V.found=null; V.preview=null; location.hash='mappa'; render(); window.scrollTo(0,0); setTimeout(()=>{ if(map){ map.invalidateSize(); if(mePos) map.setView(mePos,16); } }, 80); break;
+    case 'draw-undo': V.draw.pop(); drawMap(); render(); break;
+    case 'draw-cancel': V.mode='idle'; V.draw=[]; V.found=null; V.preview=null; render(); break;
+    case 'draw-done': cercaVie(); break;
+    case 'save-plan': salvaGiro(); break;
+    case 'open-piano': V.tab='mappa'; V.viaId=null; V.mode='idle'; V.pianoId=id; location.hash='mappa'; render(); window.scrollTo(0,0); setTimeout(focusStep, 80); break;
+    case 'close-piano': V.pianoId=null; render(); fitMap(); break;
+    case 'step': { const p = S.piani[V.pianoId]; p.pos = Math.max(0, Math.min(p.ordine.length-1, (p.pos||0)+Number(t.dataset.d))); putPiano(V.pianoId, p); focusStep(); window.scrollTo(0,0); break; }
+    case 'goto-step': { const p = S.piani[V.pianoId]; p.pos = Number(t.dataset.k); putPiano(V.pianoId, p); focusStep(); window.scrollTo(0,0); break; }
+    case 'replan': replan(id); break;
+    case 'gps': toggleGPS(); break;
+    case 'fit': if(V.pianoId && V.mode==='idle') focusStep(); else fitMap(); break;
+  }
+});
+document.addEventListener('change', e => {
+  if(e.target.matches('[data-act="seg-sel"]') && V.found){ V.found.nome = val('z-nome') || V.found.nome; V.found.segs[Number(e.target.dataset.i)].sel = e.target.checked; ricalcolaPreview(); render(); }
+  if(e.target.id==='import-file' && e.target.files[0]){ importData(e.target.files[0]); e.target.value=''; }
+});
+document.addEventListener('input', e => {
+  if(e.target.id==='z-nome' && V.found){ V.found.nome = e.target.value; return; }
+  const k = e.target.id==='q-vie' ? 'q' : e.target.id==='q-cont' ? 'qc' : null; if(!k) return;
+  V[k] = e.target.value; const pos = e.target.selectionStart; const idf = e.target.id; render(); const n = document.getElementById(idf); if(n){ n.focus(); try{ n.setSelectionRange(pos,pos); }catch(_){} }
+});
+document.addEventListener('keydown', e => { if(e.key==='Escape' && sheetCtx!==null) closeSheet(); });
+
+function fromHash(){
+  const h = (location.hash||'').slice(1);
+  if(h.startsWith('via-')){ V.viaId = h.slice(4); }
+  else if(['oggi','mappa','vie','contatti','stats'].includes(h)){ V.tab = h; V.viaId = null; }
+}
+window.addEventListener('hashchange', () => { fromHash(); render(); });
+load(); fromHash(); render();
+if(V.tab==='mappa') setTimeout(fitMap, 100);
+</script>
+</body>
+</html>
