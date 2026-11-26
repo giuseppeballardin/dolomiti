@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Scanner PDF</title>
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate">
 <meta name="theme-color" content="#0f766e">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -101,7 +102,7 @@ input[type=text]{width:100%;height:46px;border-radius:12px;border:1px solid var(
 </head>
 <body>
 <div id="app">
-  <header class="top"><h1>Scanner PDF</h1><span id="count"></span></header>
+  <header class="top"><h1>Scanner PDF <small id="ver" style="font-size:12px;font-weight:500;color:var(--mute)"></small></h1><span id="count"></span></header>
   <main id="main"></main>
   <div class="bar"><div class="in">
     <button class="btn sec" id="bGal"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="M21 16l-5-5-8 8"/></svg>Galleria</button>
@@ -398,7 +399,7 @@ function detectDoc(src,opt){
   }
   let best=null;for(const q of cands)if(!best||q.score>best.score)best=q;
   // a parita' di evidenza si sceglie il bordo piu' interno (evita ombre e fogli sotto)
-  if(best)for(const q of cands)if(q.score>=best.score*.97&&q.af<best.af-.002)best=q;
+  if(best){const b0=best;for(const q of cands)if(q.score>=b0.score*.97&&q.af<best.af-.002&&q.af>=b0.af*.85)best=q}
   if(!best||best.conf<.3)return{quad:defaultQuad(src.width,src.height),conf:0};
   return{quad:best.quad.map(p=>({x:Math.min(src.width,Math.max(0,p.x/sc)),y:Math.min(src.height,Math.max(0,p.y/sc))})),conf:Math.min(1,best.conf),kind:best.kind};
 }
@@ -485,8 +486,8 @@ function renderPage(p){
   p.out=o;
   const t=scaleTo(o,360);p.thumb=t;
 }
-function newPage(src,quad){
-  const p={src,quad,filter:'enhanced',rot:0,warped:null,out:null,thumb:null};
+function newPage(src,quad,det){
+  const p={det:det||null,src,quad,filter:'enhanced',rot:0,warped:null,out:null,thumb:null};
   p.warped=warp(src,quad);renderPage(p);state.pages.push(p);return p;
 }
 async function addFiles(files,opt){
@@ -494,7 +495,7 @@ async function addFiles(files,opt){
   const added=[],confs=[];
   await busy(async()=>{
     for(const f of files){
-      try{const src=await loadImage(f),r=detectDoc(src);added.push(newPage(src,r.quad));confs.push(r.conf)}
+      try{const src=await loadImage(f),r=detectDoc(src);added.push(newPage(src,r.quad,r));confs.push(r.conf)}
       catch(e){toast('Impossibile leggere una delle immagini')}
     }
   });
@@ -536,9 +537,9 @@ function setMode(mode){
   const ed=state.ed;ed.mode=mode;const t=$('#eTools');t.innerHTML='';
   if(mode==='crop'){
     $('#eTitle').textContent='Ritaglia';$('#eNext').textContent='Avanti';
-    $('#hint').textContent='Trascina gli angoli sui bordi del documento';
+    {const d=ed.p.det;$('#hint').textContent='Trascina gli angoli sui bordi del documento'+(d?(d.conf>=.35?' · rilevato '+Math.round(d.conf*100)+'%':' · bordi non rilevati'):'')}
     t.innerHTML='<button id="tAuto">'+ICON.wand+'Rileva</button><button id="tReset">'+ICON.reset+'Tutta la foto</button>';
-    $('#tAuto').onclick=async()=>{const r=await busy(()=>detectDoc(ed.p.src));ed.p.quad=r.quad;if(r.conf<.35)toast('Bordi non rilevati: regola gli angoli a mano');draw()};
+    $('#tAuto').onclick=async()=>{const r=await busy(()=>detectDoc(ed.p.src));ed.p.quad=r.quad;ed.p.det=r;if(r.conf<.35)toast('Bordi non rilevati: regola gli angoli a mano');draw()};
     $('#tReset').onclick=()=>{ed.p.quad=defaultQuad(ed.p.src.width,ed.p.src.height);draw()};
   }else{
     $('#eTitle').textContent='Aspetto';$('#eNext').textContent='Fatto';$('#hint').textContent='';
@@ -736,7 +737,7 @@ async function shoot(){
   await tick();
   try{
     const r=detectDoc(src),quad=r.conf>=.35?r.quad:(lq||defaultQuad(src.width,src.height));
-    newPage(src,quad);live.added++;updateLiveUi();
+    newPage(src,quad,r);live.added++;updateLiveUi();
   }catch(e){toast('Scatto non riuscito')}
   live.busy=false;$('#lShot').disabled=false;
 }
@@ -757,6 +758,7 @@ $('#bCam').onclick=async()=>{
 $('#bGal').onclick=()=>$('#fGal').click();
 $('#bExp').onclick=openSheet;
 for(const id of['#fCam','#fGal'])$(id).onchange=e=>{const f=[...e.target.files];e.target.value='';addFiles(f,{camera:id==='#fCam'})};
+const VERSION='v3 · 25/11 14:40';$('#ver').textContent=VERSION;
 renderGrid();
 </script>
 </body>
